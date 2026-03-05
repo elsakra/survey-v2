@@ -4,6 +4,7 @@ import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { LaunchButton } from "./launch-button";
 import { PauseResumeButton } from "./pause-resume-button";
+import { CloneButton } from "./clone-button";
 
 export default async function CampaignDetailPage({
   params,
@@ -85,6 +86,7 @@ export default async function CampaignDetailPage({
               Edit Campaign
             </Link>
           )}
+          <CloneButton campaignId={campaignId} />
           <Link
             href={`/dashboard/${campaignId}/test`}
             className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
