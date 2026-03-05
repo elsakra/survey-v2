@@ -33,10 +33,20 @@ export async function POST(
     return NextResponse.json({ error: "No pending contacts" }, { status: 400 });
   }
 
-  await inngest.send({
-    name: "campaign/launch",
-    data: { campaignId },
-  });
+  await supabase
+    .from("campaigns")
+    .update({ status: "active" })
+    .eq("id", campaignId);
+
+  try {
+    await inngest.send({
+      name: "campaign/launch",
+      data: { campaignId },
+    });
+  } catch (err) {
+    console.error("Inngest send failed:", err);
+    return NextResponse.json({ success: true, pendingContacts: count, warning: "Call scheduling may be delayed" });
+  }
 
   return NextResponse.json({ success: true, pendingContacts: count });
 }

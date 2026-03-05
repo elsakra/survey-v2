@@ -21,13 +21,6 @@ export const processCampaign = inngest.createFunction(
 
     if (contacts.length === 0) return { message: "No pending contacts" };
 
-    await step.run("update-campaign-status", async () => {
-      await supabase
-        .from("campaigns")
-        .update({ status: "active" })
-        .eq("id", campaignId);
-    });
-
     await step.run("update-contacts-queued", async () => {
       const contactIds = contacts.map((c) => c.id);
       await supabase

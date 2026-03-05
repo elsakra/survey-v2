@@ -5,17 +5,19 @@ import { useRouter } from "next/navigation";
 
 export function LaunchButton({ campaignId }: { campaignId: string }) {
   const [launching, setLaunching] = useState(false);
+  const [launched, setLaunched] = useState(false);
   const router = useRouter();
 
   async function handleLaunch() {
-    if (!confirm("Launch this campaign? Calls will be placed to all pending contacts.")) return;
+    if (!window.confirm("Launch this campaign? Calls will be placed to all pending contacts.")) return;
     setLaunching(true);
     try {
       const res = await fetch(`/api/campaigns/${campaignId}/launch`, { method: "POST" });
+      const body = await res.json();
       if (!res.ok) {
-        const body = await res.json();
         alert(body.error ?? "Failed to launch");
       } else {
+        setLaunched(true);
         router.refresh();
       }
     } catch {
@@ -23,6 +25,14 @@ export function LaunchButton({ campaignId }: { campaignId: string }) {
     } finally {
       setLaunching(false);
     }
+  }
+
+  if (launched) {
+    return (
+      <span className="px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
+        Campaign Launched
+      </span>
+    );
   }
 
   return (
