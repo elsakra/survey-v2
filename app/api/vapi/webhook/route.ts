@@ -97,8 +97,9 @@ export async function POST(request: Request) {
 
       const vapiMessages = extractVapiMessages(payload);
       if (vapiMessages.length > 0) {
-        const plainText = vapiMessages
-          .map((m: any) => `${m.role === "assistant" ? "Interviewer" : "Participant"}: ${m.content ?? m.text ?? ""}`)
+        const normalizedMessages = normalizeTranscriptMessages(vapiMessages);
+        const plainText = normalizedMessages
+          .map((m) => `${m.speaker === "interviewer" ? "Interviewer" : "Interviewee"}: ${m.text}`)
           .join("\n\n");
 
         await supabase.from("transcripts").insert({
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
         await supabase.from("transcripts").insert({
           session_id: sessionId,
           transcript_type: "turns",
-          content: JSON.stringify(vapiMessages),
+          content: JSON.stringify(normalizedMessages),
         });
       }
 
@@ -247,6 +248,58 @@ function extractVapiMessages(payload: Record<string, any>): Array<Record<string,
   return Array.isArray(messages)
     ? messages.filter((m: any) => m.role !== "system")
     : [];
+}
+
+function normalizeTranscriptMessages(
+  messages: Array<Record<string, any>>,
+): Array<{
+  speaker: "interviewer" | "interviewee";
+  text: string;
+  role: string | null;
+  startMs: number | null;
+  endMs: number | null;
+}> {
+  return messages
+    .map((message) => {
+      const role = String(message.role ?? message.speaker ?? "").toLowerCase();
+      if (role.includes("system")) return null;
+
+      const speaker: "interviewer" | "interviewee" =
+        role.includes("assistant") || role.includes("agent") || role.includes("bot")
+          ? "interviewer"
+          : "interviewee";
+
+      const text = String(message.content ?? message.text ?? message.transcript ?? "").trim();
+      if (!text) return null;
+
+      const secondsFromStart = message.secondsFromStart;
+      const duration = message.duration;
+      const startMs =
+        typeof secondsFromStart === "number" ? Math.round(secondsFromStart * 1000) : null;
+      const endMs =
+        typeof secondsFromStart === "number" && typeof duration === "number"
+          ? Math.round((secondsFromStart + duration) * 1000)
+          : null;
+
+      return {
+        speaker,
+        text,
+        role: message.role ?? null,
+        startMs,
+        endMs,
+      };
+    })
+    .filter(
+      (
+        message,
+      ): message is {
+        speaker: "interviewer" | "interviewee";
+        text: string;
+        role: string | null;
+        startMs: number | null;
+        endMs: number | null;
+      } => Boolean(message),
+    );
 }
 
 function extractAnalysis(payload: Record<string, any>) {

@@ -30,6 +30,7 @@ export default async function ContactDetailPage({
 
   let transcripts: any[] = [];
   let session: any = null;
+  let dbTurns: any[] = [];
   if (contact.session_id) {
     const { data: sess } = await supabase
       .from("sessions")
@@ -44,6 +45,13 @@ export default async function ContactDetailPage({
       .eq("session_id", contact.session_id)
       .order("created_at", { ascending: true });
     transcripts = trans ?? [];
+
+    const { data: turnRows } = await supabase
+      .from("turns")
+      .select("turn_index,speaker,prompt_text,response_text,start_ms,end_ms")
+      .eq("session_id", contact.session_id)
+      .order("turn_index", { ascending: true });
+    dbTurns = turnRows ?? [];
   }
 
   return (
@@ -137,7 +145,7 @@ export default async function ContactDetailPage({
           <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
             Transcript
           </h3>
-          <TranscriptViewer transcripts={transcripts} sessionId={contact.session_id!} />
+          <TranscriptViewer transcripts={transcripts} sessionId={contact.session_id!} dbTurns={dbTurns} />
         </div>
       ) : contact.session_id ? (
         <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">

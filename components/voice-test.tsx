@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 interface Message {
   role: "assistant" | "user";
   content: string;
+  startMs?: number | null;
+  endMs?: number | null;
+  receivedAt: string;
 }
 
 interface VoiceTestError {
@@ -119,15 +122,48 @@ export function VoiceTest({
   const hadLiveSessionRef = useRef(false);
   const markedStatusRef = useRef<"completed" | "skipped" | null>(null);
 
-  const addMessage = useCallback((role: "assistant" | "user", content: string) => {
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === role) {
-        return [...prev.slice(0, -1), { role, content: last.content + " " + content }];
-      }
-      return [...prev, { role, content }];
-    });
+  const addMessage = useCallback((message: Message) => {
+    setMessages((prev) => [...prev, message]);
   }, []);
+
+  function normalizeRole(input: unknown): "assistant" | "user" {
+    const role = String(input ?? "").toLowerCase();
+    if (role.includes("assistant") || role.includes("agent") || role.includes("bot")) {
+      return "assistant";
+    }
+    return "user";
+  }
+
+  function parseMessageTiming(msg: any): { startMs: number | null; endMs: number | null } {
+    const secondsFromStart = msg?.secondsFromStart ?? msg?.timestampSeconds ?? null;
+    const duration = msg?.duration ?? msg?.durationSeconds ?? null;
+    if (secondsFromStart == null || Number.isNaN(Number(secondsFromStart))) {
+      return { startMs: null, endMs: null };
+    }
+    const startMs = Math.round(Number(secondsFromStart) * 1000);
+    const endMs =
+      duration != null && !Number.isNaN(Number(duration))
+        ? Math.round((Number(secondsFromStart) + Number(duration)) * 1000)
+        : null;
+    return { startMs, endMs };
+  }
+
+  function formatTimestamp(message: Message): string {
+    if (message.startMs != null) {
+      const toClock = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const min = Math.floor(totalSeconds / 60);
+        const sec = totalSeconds % 60;
+        return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+      };
+      const start = toClock(message.startMs);
+      if (message.endMs != null && message.endMs >= message.startMs) {
+        return `${start} - ${toClock(message.endMs)}`;
+      }
+      return start;
+    }
+    return new Date(message.receivedAt).toLocaleTimeString();
+  }
 
   async function startTest() {
     setError(null);
@@ -178,7 +214,17 @@ export function VoiceTest({
         vapi.on("speech-end", () => {});
         vapi.on("message", (msg: any) => {
           if (msg.type === "transcript" && msg.transcriptType === "final") {
-            addMessage(msg.role === "assistant" ? "assistant" : "user", msg.transcript);
+            const role = normalizeRole(msg.role ?? msg.speaker);
+            const content = String(msg.transcript ?? msg.text ?? msg.content ?? "").trim();
+            if (!content) return;
+            const timing = parseMessageTiming(msg);
+            addMessage({
+              role,
+              content,
+              startMs: timing.startMs,
+              endMs: timing.endMs,
+              receivedAt: new Date().toISOString(),
+            });
           }
         });
         vapi.on("call-start", () => {
@@ -324,14 +370,17 @@ export function VoiceTest({
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
           {messages.map((m, i) => (
             <div key={i} className="px-4 py-3 flex gap-3">
-              <span
-                className={`text-xs font-medium uppercase w-16 shrink-0 mt-0.5 ${
-                  m.role === "assistant" ? "text-blue-600" : "text-gray-500"
-                }`}
-              >
-                {m.role === "assistant" ? "AI" : "You"}
-              </span>
-              <p className="text-sm text-gray-700">{m.content}</p>
+              <div className="w-24 shrink-0 mt-0.5">
+                <span
+                  className={`block text-xs font-medium uppercase ${
+                    m.role === "assistant" ? "text-blue-600" : "text-gray-500"
+                  }`}
+                >
+                  {m.role === "assistant" ? "Interviewer" : "Interviewee"}
+                </span>
+                <span className="block text-[11px] text-gray-400 mt-0.5">{formatTimestamp(m)}</span>
+              </div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{m.content}</p>
             </div>
           ))}
         </div>
