@@ -115,12 +115,14 @@ export function VoiceTest({
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "connecting" | "active" | "ended">("idle");
   const [ending, setEnding] = useState(false);
+  const [completedThisRun, setCompletedThisRun] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<VoiceTestError | null>(null);
   const vapiRef = useRef<any>(null);
   const mountedRef = useRef(true);
   const hadLiveSessionRef = useRef(false);
   const markedStatusRef = useRef<"completed" | "skipped" | null>(null);
+  const seenMessageKeysRef = useRef<Set<string>>(new Set());
 
   const addMessage = useCallback((message: Message) => {
     setMessages((prev) => [...prev, message]);
@@ -128,10 +130,74 @@ export function VoiceTest({
 
   function normalizeRole(input: unknown): "assistant" | "user" {
     const role = String(input ?? "").toLowerCase();
-    if (role.includes("assistant") || role.includes("agent") || role.includes("bot")) {
+    if (
+      role.includes("assistant") ||
+      role.includes("agent") ||
+      role.includes("bot") ||
+      role.includes("interviewer") ||
+      role.includes("ai") ||
+      role.includes("model")
+    ) {
       return "assistant";
     }
     return "user";
+  }
+
+  function pushTranscriptLine(
+    roleInput: unknown,
+    contentInput: unknown,
+    timingSource: any,
+    fallbackReceivedAt?: string,
+  ) {
+    const content = String(contentInput ?? "").trim();
+    if (!content) return;
+    const role = normalizeRole(roleInput);
+    const timing = parseMessageTiming(timingSource);
+    const receivedAt = fallbackReceivedAt ?? new Date().toISOString();
+    const dedupeKey = `${role}|${content}|${timing.startMs ?? "na"}|${timing.endMs ?? "na"}`;
+    if (seenMessageKeysRef.current.has(dedupeKey)) return;
+    seenMessageKeysRef.current.add(dedupeKey);
+
+    addMessage({
+      role,
+      content,
+      startMs: timing.startMs,
+      endMs: timing.endMs,
+      receivedAt,
+    });
+  }
+
+  function ingestVapiMessage(msg: any) {
+    if (!msg || typeof msg !== "object") return;
+
+    // Shape 1: direct transcript event.
+    if (msg.type === "transcript" && msg.transcriptType === "final") {
+      pushTranscriptLine(msg.role ?? msg.speaker ?? msg.participant, msg.transcript ?? msg.text ?? msg.content, msg);
+      return;
+    }
+
+    // Shape 2: a single assistant/user message payload.
+    if (msg.type === "message" || msg.type === "assistant-message" || msg.type === "user-message") {
+      const payload = msg.message ?? msg;
+      pushTranscriptLine(
+        payload.role ?? payload.speaker ?? payload.participant,
+        payload.content ?? payload.text ?? payload.transcript,
+        payload,
+      );
+    }
+
+    // Shape 3: conversation update containing one or many messages.
+    const conversation = msg.conversation ?? msg.messages ?? msg.call?.messages;
+    if (Array.isArray(conversation)) {
+      for (const entry of conversation) {
+        pushTranscriptLine(
+          entry?.role ?? entry?.speaker ?? entry?.participant,
+          entry?.content ?? entry?.text ?? entry?.transcript,
+          entry,
+          new Date().toISOString(),
+        );
+      }
+    }
   }
 
   function parseMessageTiming(msg: any): { startMs: number | null; endMs: number | null } {
@@ -169,7 +235,9 @@ export function VoiceTest({
     setError(null);
     setStatus("connecting");
     setMessages([]);
+    seenMessageKeysRef.current.clear();
     setEnding(false);
+    setCompletedThisRun(false);
     hadLiveSessionRef.current = false;
     markedStatusRef.current = null;
 
@@ -213,19 +281,7 @@ export function VoiceTest({
         vapi.on("speech-start", () => {});
         vapi.on("speech-end", () => {});
         vapi.on("message", (msg: any) => {
-          if (msg.type === "transcript" && msg.transcriptType === "final") {
-            const role = normalizeRole(msg.role ?? msg.speaker);
-            const content = String(msg.transcript ?? msg.text ?? msg.content ?? "").trim();
-            if (!content) return;
-            const timing = parseMessageTiming(msg);
-            addMessage({
-              role,
-              content,
-              startMs: timing.startMs,
-              endMs: timing.endMs,
-              receivedAt: new Date().toISOString(),
-            });
-          }
+          ingestVapiMessage(msg);
         });
         vapi.on("call-start", () => {
           if (!mountedRef.current) return;
@@ -237,6 +293,7 @@ export function VoiceTest({
           if (!mountedRef.current) return;
           if (hadLiveSessionRef.current && markedStatusRef.current !== "completed") {
             markedStatusRef.current = "completed";
+            setCompletedThisRun(true);
             void fetch(`/api/campaigns/${campaignId}/test-status`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -290,6 +347,9 @@ export function VoiceTest({
     try {
       await vapiRef.current.stop();
       // Keep UI responsive even if "call-end" event is delayed.
+      if (hadLiveSessionRef.current) {
+        setCompletedThisRun(true);
+      }
       setStatus("ended");
     } catch (e: any) {
       setError(normalizeVoiceError(e));
@@ -311,7 +371,7 @@ export function VoiceTest({
   return (
     <div className="space-y-4">
       <div className="flex gap-3">
-        {status === "idle" || status === "ended" ? (
+        {status === "idle" || (status === "ended" && !completedThisRun) ? (
           <button
             onClick={startTest}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -322,6 +382,21 @@ export function VoiceTest({
           <button disabled className="px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-lg">
             Connecting...
           </button>
+        ) : status === "ended" && completedThisRun ? (
+          <>
+            <button
+              onClick={() => router.push(`/dashboard/${campaignId}/contacts`)}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Continue to Contacts
+            </button>
+            <button
+              onClick={startTest}
+              className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Test Again
+            </button>
+          </>
         ) : (
           <button
             onClick={stopTest}

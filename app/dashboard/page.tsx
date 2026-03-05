@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
+import { CloneCampaignButton } from "@/components/clone-campaign-button";
 
 export default async function DashboardPage() {
   const supabase = await createServerClient();
@@ -51,6 +52,9 @@ export default async function DashboardPage() {
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">
                   Created
                 </th>
+                <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -72,6 +76,11 @@ export default async function DashboardPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {new Date(c.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end">
+                      <CloneCampaignButton campaignId={c.id} />
+                    </div>
                   </td>
                 </tr>
               ))}

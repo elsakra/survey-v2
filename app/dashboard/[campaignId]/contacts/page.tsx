@@ -76,6 +76,19 @@ export default function ContactsPage() {
             onComplete={loadContacts}
           />
         )}
+        {contacts.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">
+              {contacts.length} contact{contacts.length === 1 ? "" : "s"} ready.
+            </p>
+            <Link
+              href={`/dashboard/${campaignId}`}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Continue to Review & Launch
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
