@@ -67,6 +67,14 @@ export default async function CampaignDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          {campaign.status === "draft" && (
+            <Link
+              href={`/dashboard/${campaignId}/edit`}
+              className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Edit Campaign
+            </Link>
+          )}
           <Link
             href={`/dashboard/${campaignId}/test`}
             className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"

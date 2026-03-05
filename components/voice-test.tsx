@@ -31,6 +31,8 @@ function normalizeVoiceError(error: any): VoiceTestError {
   const message = String(rawMessage);
   const details = safeStringify(error);
   const lowered = `${message} ${details}`.toLowerCase();
+  const assistantApiUnauthorized =
+    error?.source === "assistant-api" && Number(error?.status) === 401;
 
   if (lowered.includes("permission") || lowered.includes("notallowederror")) {
     return {
@@ -59,7 +61,21 @@ function normalizeVoiceError(error: any): VoiceTestError {
     };
   }
 
-  if (lowered.includes("unauthorized") || lowered.includes("401")) {
+  if (
+    lowered.includes("invalid key") ||
+    lowered.includes("private key instead of the public key") ||
+    lowered.includes("public key instead of the private key")
+  ) {
+    return {
+      title: "Vapi key misconfigured",
+      message: "The browser voice SDK is using an invalid Vapi key.",
+      guidance:
+        "Set NEXT_PUBLIC_VAPI_PUBLIC_KEY to your Vapi public key (not the private key), then redeploy and try again.",
+      details,
+    };
+  }
+
+  if (assistantApiUnauthorized) {
     return {
       title: "Session expired",
       message: "Your login session is no longer valid.",
