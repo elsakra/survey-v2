@@ -1,0 +1,32 @@
+{
+  "name": "survey-v2",
+  "version": "1.0.0",
+  "description": "AI-conducted phone interview pipeline – V1",
+  "type": "module",
+  "scripts": {
+    "interview": "tsx src/cli/interview.ts",
+    "db:push": "supabase db push --linked",
+    "db:types": "supabase gen types typescript --linked > src/db/types.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "dependencies": {
+    "@ngrok/ngrok": "^1.7.0",
+    "@supabase/supabase-js": "^2.98.0",
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "openai": "^6.26.0",
+    "twilio": "^5.12.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

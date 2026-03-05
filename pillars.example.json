@@ -1,0 +1,23 @@
+{
+  "title": "Customer Discovery – Workflow Pain Points",
+  "pillars": [
+    {
+      "id": "p1",
+      "question": "Walk me through how you currently handle your end-to-end workflow from start to finish."
+    },
+    {
+      "id": "p2",
+      "question": "Where does the process break most often, and what do you do when it breaks?"
+    },
+    {
+      "id": "p3",
+      "question": "How do you decide between different approaches or tools when something needs to change?"
+    }
+  ],
+  "tone": {
+    "style": "warm, crisp, professional"
+  },
+  "constraints": {
+    "prefer_quantification": true
+  }
+}
