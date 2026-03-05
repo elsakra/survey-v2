@@ -103,9 +103,11 @@ function normalizeVoiceError(error: any): VoiceTestError {
 
 export function VoiceTest({ campaignId }: { campaignId: string }) {
   const [status, setStatus] = useState<"idle" | "connecting" | "active" | "ended">("idle");
+  const [ending, setEnding] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<VoiceTestError | null>(null);
   const vapiRef = useRef<any>(null);
+  const mountedRef = useRef(true);
 
   const addMessage = useCallback((role: "assistant" | "user", content: string) => {
     setMessages((prev) => {
@@ -121,8 +123,27 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
     setError(null);
     setStatus("connecting");
     setMessages([]);
+    setEnding(false);
 
     try {
+      if (!vapiRef.current) {
+        const { default: Vapi } = await import("@vapi-ai/web");
+        const key = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
+        if (!key) {
+          throw new Error("Missing NEXT_PUBLIC_VAPI_PUBLIC_KEY");
+        }
+        vapiRef.current = new Vapi(key);
+      }
+
+      const vapi = vapiRef.current;
+
+      // Ensure any previous call is fully terminated before starting a new one.
+      try {
+        await vapi.stop();
+      } catch {
+        // no-op: stop may fail if there is no active call
+      }
+
       const res = await fetch(`/api/campaigns/${campaignId}/assistant`, { method: "POST" });
       if (!res.ok) {
         let body: any = null;
@@ -140,40 +161,63 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
       }
       const { assistantId } = await res.json();
 
-      const { default: Vapi } = await import("@vapi-ai/web");
-      const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY!);
-      vapiRef.current = vapi;
-
-      vapi.on("speech-start", () => {});
-      vapi.on("speech-end", () => {});
-      vapi.on("message", (msg: any) => {
-        if (msg.type === "transcript" && msg.transcriptType === "final") {
-          addMessage(msg.role === "assistant" ? "assistant" : "user", msg.transcript);
-        }
-      });
-      vapi.on("call-start", () => setStatus("active"));
-      vapi.on("call-end", () => setStatus("ended"));
-      vapi.on("error", (e: any) => {
-        console.error("Vapi error:", e);
-        setError(normalizeVoiceError(e));
-        setStatus("ended");
-      });
+      if (!vapiRef.current.__listenersBound) {
+        vapi.on("speech-start", () => {});
+        vapi.on("speech-end", () => {});
+        vapi.on("message", (msg: any) => {
+          if (msg.type === "transcript" && msg.transcriptType === "final") {
+            addMessage(msg.role === "assistant" ? "assistant" : "user", msg.transcript);
+          }
+        });
+        vapi.on("call-start", () => {
+          if (!mountedRef.current) return;
+          setStatus("active");
+          setEnding(false);
+        });
+        vapi.on("call-end", () => {
+          if (!mountedRef.current) return;
+          setStatus("ended");
+          setEnding(false);
+        });
+        vapi.on("error", (e: any) => {
+          if (!mountedRef.current) return;
+          console.error("Vapi error:", e);
+          setError(normalizeVoiceError(e));
+          setStatus("ended");
+          setEnding(false);
+        });
+        vapiRef.current.__listenersBound = true;
+      }
 
       await vapi.start(assistantId);
     } catch (e: any) {
       setError(normalizeVoiceError(e));
       setStatus("idle");
+      setEnding(false);
     }
   }
 
-  function stopTest() {
-    vapiRef.current?.stop();
-    setStatus("ended");
+  async function stopTest() {
+    if (!vapiRef.current || ending) return;
+    setEnding(true);
+    try {
+      await vapiRef.current.stop();
+      // Keep UI responsive even if "call-end" event is delayed.
+      setStatus("ended");
+    } catch (e: any) {
+      setError(normalizeVoiceError(e));
+      setStatus("ended");
+    } finally {
+      setEnding(false);
+    }
   }
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      vapiRef.current?.stop();
+      mountedRef.current = false;
+      // Best effort cleanup on unmount.
+      vapiRef.current?.stop?.();
     };
   }, []);
 
@@ -194,9 +238,10 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
         ) : (
           <button
             onClick={stopTest}
-            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            disabled={ending}
+            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
-            End Conversation
+            {ending ? "Ending..." : "End Conversation"}
           </button>
         )}
 
