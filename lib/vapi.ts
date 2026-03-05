@@ -1,5 +1,17 @@
 const VAPI_API_BASE = "https://api.vapi.ai";
 
+const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "openai";
+const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "gpt-4o-mini";
+const DEFAULT_MODEL_TEMPERATURE = Number(process.env.VAPI_MODEL_TEMPERATURE ?? "0.35");
+const DEFAULT_VOICE_SPEED = Number(process.env.VAPI_VOICE_SPEED ?? "0.98");
+const DEFAULT_VOICE_STABILITY = Number(process.env.VAPI_VOICE_STABILITY ?? "0.5");
+const DEFAULT_VOICE_SIMILARITY = Number(process.env.VAPI_VOICE_SIMILARITY ?? "0.8");
+const DEFAULT_WAIT_SECONDS = Number(process.env.VAPI_WAIT_SECONDS ?? "0.6");
+const DEFAULT_RESPONSE_DELAY_SECONDS = Number(process.env.VAPI_RESPONSE_DELAY_SECONDS ?? "0.35");
+const DEFAULT_STOP_WORDS = Number(process.env.VAPI_STOP_WORDS ?? "2");
+const DEFAULT_STOP_VOICE_SECONDS = Number(process.env.VAPI_STOP_VOICE_SECONDS ?? "0.2");
+const DEFAULT_STOP_BACKOFF_SECONDS = Number(process.env.VAPI_STOP_BACKOFF_SECONDS ?? "0.8");
+
 function vapiHeaders(): Record<string, string> {
   const apiKey = process.env.VAPI_PRIVATE_KEY;
   if (!apiKey) throw new Error("Missing VAPI_PRIVATE_KEY");
@@ -186,28 +198,31 @@ export async function createVapiAssistant(opts: CreateAssistantOpts) {
     name: assistantName,
     firstMessage,
     model: {
-      provider: "groq",
-      model: "meta-llama/llama-4-maverick-17b-128e-instruct",
-      temperature: 0.6,
+      provider: DEFAULT_MODEL_PROVIDER,
+      model: DEFAULT_MODEL_NAME,
+      temperature: DEFAULT_MODEL_TEMPERATURE,
       messages: [{ role: "system", content: systemPrompt }],
     },
     voice: {
       provider: "11labs",
       voiceId: "MnUw1cSnpiLoLhpd3Hqp",
-      stability: 0.55,
-      similarityBoost: 0.75,
-      speed: 0.92,
+      ...(process.env.VAPI_SERVER_CREDENTIAL_ID
+        ? { credentialId: process.env.VAPI_SERVER_CREDENTIAL_ID }
+        : {}),
+      stability: DEFAULT_VOICE_STABILITY,
+      similarityBoost: DEFAULT_VOICE_SIMILARITY,
+      speed: DEFAULT_VOICE_SPEED,
     },
     startSpeakingPlan: {
-      waitSeconds: 1.8,
+      waitSeconds: DEFAULT_WAIT_SECONDS,
       smartEndpointingPlan: { provider: "livekit" },
     },
     stopSpeakingPlan: {
-      numWords: 3,
-      voiceSeconds: 0.3,
-      backoffSeconds: 2.0,
+      numWords: DEFAULT_STOP_WORDS,
+      voiceSeconds: DEFAULT_STOP_VOICE_SECONDS,
+      backoffSeconds: DEFAULT_STOP_BACKOFF_SECONDS,
     },
-    responseDelaySeconds: 1.0,
+    responseDelaySeconds: DEFAULT_RESPONSE_DELAY_SECONDS,
     silenceTimeoutSeconds: 45,
     maxDurationSeconds: durationSec + 30,
     endCallMessage: "Thanks again for your time. Take care.",

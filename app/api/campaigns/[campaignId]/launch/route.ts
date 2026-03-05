@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
+import { extractInngestEventIds } from "@/lib/inngest/send-result";
 
 export async function POST(
   _request: Request,
@@ -39,7 +40,10 @@ export async function POST(
     .eq("id", campaignId);
 
   if (activateError) {
-    console.error("Failed to set campaign active:", activateError);
+    console.error("[campaign launch] Failed to set campaign active", {
+      campaignId,
+      error: activateError.message,
+    });
     return NextResponse.json({ error: "Failed to launch campaign" }, { status: 500 });
   }
 
@@ -48,14 +52,52 @@ export async function POST(
       name: "campaign/launch",
       data: { campaignId },
     });
-    return NextResponse.json({ success: true, pendingContacts: count, sendResult });
+    const eventIds = extractInngestEventIds(sendResult);
+    if (eventIds.length === 0) {
+      console.error("[campaign launch] Inngest send missing event IDs", {
+        campaignId,
+        sendResult,
+      });
+      const { error: rollbackError } = await supabase
+        .from("campaigns")
+        .update({ status: "draft" })
+        .eq("id", campaignId);
+      if (rollbackError) {
+        console.error("[campaign launch] Failed to rollback campaign status", {
+          campaignId,
+          error: rollbackError.message,
+        });
+      }
+      return NextResponse.json(
+        { error: "Launch enqueue was not acknowledged by Inngest. Please retry." },
+        { status: 502 },
+      );
+    }
+
+    console.info("[campaign launch] Enqueue acknowledged", {
+      campaignId,
+      eventIds,
+      pendingContacts: count,
+    });
+
+    return NextResponse.json({ success: true, pendingContacts: count, eventIds });
   } catch (err) {
-    console.error("Inngest send failed:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[campaign launch] Inngest send failed", {
+      campaignId,
+      error: message,
+    });
     // Roll back status so UI reflects that launch did not fully start.
-    await supabase
+    const { error: rollbackError } = await supabase
       .from("campaigns")
       .update({ status: "draft" })
       .eq("id", campaignId);
+    if (rollbackError) {
+      console.error("[campaign launch] Failed to rollback campaign status", {
+        campaignId,
+        error: rollbackError.message,
+      });
+    }
     return NextResponse.json(
       { error: "Failed to enqueue campaign launch in Inngest. Please retry." },
       { status: 502 },
