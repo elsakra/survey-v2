@@ -188,11 +188,7 @@ export function detectStopIntent(text: string): boolean {
 
 export function detectConsentResponse(
   speechResult: string | undefined,
-  digits: string | undefined,
 ): "yes" | "no" | "unclear" {
-  if (digits === "1") return "yes";
-  if (digits === "2") return "no";
-
   if (speechResult) {
     const lower = speechResult.toLowerCase().trim();
     if (
@@ -201,16 +197,14 @@ export function detectConsentResponse(
       lower.includes("okay") ||
       lower.includes("go ahead") ||
       lower.includes("i consent") ||
-      lower.includes("that's fine") ||
-      lower === "1"
+      lower.includes("that's fine")
     )
       return "yes";
     if (
       lower.includes("no") ||
       lower.includes("don't") ||
       lower.includes("do not") ||
-      lower.includes("refuse") ||
-      lower === "2"
+      lower.includes("refuse")
     )
       return "no";
   }

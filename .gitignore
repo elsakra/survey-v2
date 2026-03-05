@@ -1,7 +1,11 @@
 node_modules/
 dist/
 .env
+.env.local
 recordings/
 *.mp3
 *.wav
 .DS_Store
+.next/
+__pycache__/
+next-env.d.ts

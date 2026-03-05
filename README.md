@@ -1,107 +1,116 @@
 # survey-v2
 
-AI-conducted phone interview pipeline. Places an outbound call via Twilio, runs a PhD-quality adaptive interview using an LLM orchestrator, records the call, transcribes it with Whisper, and stores everything in Supabase.
+Vapi-first conversational phone interview pipeline.
+
+- Outbound call is created by Vapi directly.
+- Voice defaults to ElevenLabs for realism.
+- No DTMF/keypad flow (speech-only conversation).
+- Results stored in Supabase (`campaigns`, `sessions`, `turns`, `recordings`, `transcripts`).
 
 ## Prerequisites
 
 - Node.js >= 18
 - pnpm
-- Twilio account with a phone number
-- OpenAI API key
+- ngrok account
+- Vapi account + phone number ID
+- OpenAI API key (LLM + Whisper STT)
 - Supabase project
-- ngrok account (free tier works)
 
 ## Setup
 
 ```bash
-# 1. Install dependencies
+# 1) Install ngrok CLI
+brew install ngrok/ngrok/ngrok
+ngrok config add-authtoken <YOUR_NGROK_AUTHTOKEN>
+
+# 2) Install deps
 pnpm i
 
-# 2. Configure environment
+# 3) Create .env
 cp .env.example .env
-# Edit .env with your credentials
-
-# 3. Database is already set up in Supabase
-# If you need to re-run migrations:
-# Paste the SQL from supabase/migrations/00001_init.sql into the Supabase SQL editor
 ```
 
-## Environment Variables
+Then fill these required values in `.env`:
 
-| Variable | Description |
+| Variable | Purpose |
 |---|---|
-| `TWILIO_ACCOUNT_SID` | Twilio Account SID |
-| `TWILIO_AUTH_TOKEN` | Twilio Auth Token |
-| `TWILIO_FROM_NUMBER` | Twilio phone number (E.164 format) |
-| `NGROK_AUTHTOKEN` | ngrok auth token (optional but recommended) |
-| `OPENAI_API_KEY` | OpenAI API key (used for LLM + Whisper) |
-| `LLM_MODEL` | OpenAI model (default: `gpt-4o-mini`) |
+| `NGROK_AUTHTOKEN` | local tunnel for Vapi webhooks |
+| `OPENAI_API_KEY` | interviewer/summary + Whisper transcription |
+| `LLM_MODEL` | default `gpt-4o-mini` |
+| `VAPI_PRIVATE_KEY` | create assistant + outbound call |
+| `VAPI_PHONE_NUMBER_ID` | Vapi phone number ID used for outbound (fallback if `VAPI_FROM_NUMBER` not set) |
+| `VAPI_FROM_NUMBER` | Preferred outbound caller E.164 number, e.g. `+12707976845` |
+| `VAPI_WEBHOOK_SECRET` | optional webhook signature verification |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 
-## Usage
+## Run Interview
 
 ```bash
-pnpm interview --to "+15551234567" --pillars-file "./pillars.example.json" --duration-sec 420
+pnpm interview --to "+15551234567" --pillars-file "./pillars.financial.short.json" --duration-sec 180
 ```
 
-### CLI Options
+## Python One-Command Runner
 
-| Flag | Required | Description |
-|---|---|---|
-| `--to <phone>` | Yes | E.164 phone number to call |
-| `--pillars-file <path>` | Yes | Path to pillars JSON file |
-| `--duration-sec <n>` | No | Max interview duration (120-1800, default: 420) |
-| `--title <text>` | No | Campaign title |
+```bash
+python3 run_test.py
+```
 
-### Pillars File Format
+Default behavior:
+- calls `+19018717753`
+- uses `./pillars.pe.diligence.short.json`
+- duration `180` sec
+- sets title to `PE Due Diligence Interview (Clozd Style)` unless `--title` is provided
+
+Useful overrides:
+
+```bash
+python3 run_test.py --to "+1XXXXXXXXXX" --duration-sec 240 --title "Financial Check-In"
+python3 run_test.py --skip-install
+```
+
+## Clozd-Style Interviewing Principles
+
+The active voice interviewer is configured to emulate expert qualitative interview behavior used in high-quality win/loss and due-diligence interviews:
+
+- Story-first opening before structured drill-down.
+- Adaptive topic ordering based on participant signal, not rigid script order.
+- Open-ended, neutral questions with one question per turn.
+- Relevance gating (skip deep dives on non-material topics).
+- Recap-and-confirm checkpoints to validate understanding.
+- Anti-rigidity guardrails to avoid repetitive over-probing.
+
+## Pillars File Format
 
 ```json
 {
-  "title": "Customer Discovery",
+  "title": "Short Financial Situation Interview",
   "pillars": [
-    { "id": "p1", "question": "Walk me through your end-to-end workflow." },
-    { "id": "p2", "question": "Where does the process break most often?" },
-    { "id": "p3", "question": "How do you decide between different approaches?" }
+    { "id": "p1", "question": "How would you describe your current financial situation month-to-month?" },
+    { "id": "p2", "question": "What is the biggest source of financial stress or uncertainty for you right now?" },
+    { "id": "p3", "question": "What changes have you made recently to manage spending, saving, or debt?" }
   ],
-  "tone": { "style": "warm, crisp, professional" },
+  "tone": { "style": "warm, respectful, non-judgmental, concise" },
   "constraints": { "prefer_quantification": true }
 }
 ```
 
-## What Happens
+## End-to-End Flow
 
-1. Creates campaign + session in Supabase
-2. Starts Express server on port 3456
-3. Opens ngrok tunnel
-4. Places outbound call via Twilio
-5. Asks for recording consent
-6. Runs warmup questions (role, context)
-7. Interviews through each pillar with adaptive follow-ups
-8. Uses an LLM assessor to track evidence coverage and avoid boredom
-9. Wraps up with summary and "anything I missed?"
-10. Downloads recording, transcribes with Whisper
-11. Stores turns, recording, and 3 transcript types in Supabase
-12. Prints session summary to terminal
-13. Shuts down
+1. CLI creates campaign/session in Supabase.
+2. Express server starts on localhost.
+3. ngrok tunnel opens and exposes `/vapi/webhook`.
+4. CLI creates a Vapi assistant (speech-only, conversational consent).
+5. CLI starts outbound call via Vapi to `--to`.
+6. Vapi sends webhook events for transcript/status/recording.
+7. Server persists turn-level rows in `turns`.
+8. On call end, CLI downloads recording, runs Whisper, stores `stt_final`.
+9. CLI stores `turns` transcript + `plain_text`, generates summary, prints output.
 
-## Database Schema
+## Output Printed in Terminal
 
-- **campaigns** — pillar config + metadata
-- **sessions** — call tracking, consent, status
-- **turns** — every agent/participant exchange with timestamps
-- **recordings** — Twilio recording reference + local file path
-- **transcripts** — structured turns, Whisper STT (word-level), plain text
-
-## Architecture
-
-```
-CLI (interview.ts)
-  → Express server (webhooks)
-  → ngrok tunnel
-  → Twilio outbound call
-  → State machine: CONSENT → WARMUP → PILLAR_LOOP → WRAPUP → END
-  → LLM assessor (evidence tracking) + interviewer (question generation)
-  → Post-call: download recording → Whisper STT → store in Supabase
-  → Print results → exit
-```
+- `session_id`
+- call status + duration
+- recording URL + local path
+- interview summary
+- DB row counts created

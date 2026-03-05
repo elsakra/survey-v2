@@ -37,7 +37,7 @@ export interface Turn {
   response_text: string | null;
   start_ms: number | null;
   end_ms: number | null;
-  raw_twilio_payload: Record<string, unknown> | null;
+  raw_event_payload: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -67,6 +67,9 @@ export interface Pillar {
 
 export interface PillarsConfig {
   title?: string;
+  context?: string;
+  interviewer_name?: string;
+  org_name?: string;
   pillars: Pillar[];
   tone?: { style: string };
   constraints?: { prefer_quantification?: boolean };

@@ -1,163 +1,169 @@
 import express from "express";
 import type { Request, Response } from "express";
-import type { InterviewState } from "./orchestrator/state.js";
-import { handleVoiceWebhook, processGather } from "./orchestrator/orchestrator.js";
+import { supabase } from "./db/supabase.js";
+import { verifyVapiWebhookSignature } from "./providers/vapi.js";
 
-export const sessions = new Map<string, InterviewState>();
+interface SessionRuntime {
+  sessionId: string;
+  callId: string | null;
+  callStartedAt: number;
+  callEndedAt: number | null;
+  ended: boolean;
+  endReason: string | null;
+  recordingUrl: string | null;
+  recordingSid: string | null;
+  turnIndex: number;
+}
+
+const sessions = new Map<string, SessionRuntime>();
+const callIdToSessionId = new Map<string, string>();
 
 let _baseUrl = "";
-let resolveCallEnded: (() => void) | null = null;
-let resolveRecordingReady: ((info: RecordingInfo) => void) | null = null;
+const callEndedResolvers = new Map<string, (info: CallEndedInfo) => void>();
 
-export interface RecordingInfo {
-  recordingSid: string;
-  recordingUrl: string;
+export interface CallEndedInfo {
+  sessionId: string;
+  callId: string | null;
+  endReason: string;
   durationSec: number;
+  recordingUrl: string | null;
+  recordingSid: string | null;
 }
 
 export function setBaseUrl(url: string) {
   _baseUrl = url;
 }
 
-export function waitForCallEnded(): Promise<void> {
-  return new Promise((resolve) => {
-    resolveCallEnded = resolve;
+export function registerSession(sessionId: string) {
+  sessions.set(sessionId, {
+    sessionId,
+    callId: null,
+    callStartedAt: Date.now(),
+    callEndedAt: null,
+    ended: false,
+    endReason: null,
+    recordingUrl: null,
+    recordingSid: null,
+    turnIndex: 0,
   });
 }
 
-export function waitForRecording(): Promise<RecordingInfo> {
+export function attachCallToSession(sessionId: string, callId: string) {
+  const runtime = sessions.get(sessionId);
+  if (!runtime) return;
+  runtime.callId = callId;
+  callIdToSessionId.set(callId, sessionId);
+}
+
+export function waitForCallEnded(sessionId: string): Promise<CallEndedInfo> {
   return new Promise((resolve) => {
-    resolveRecordingReady = resolve;
+    callEndedResolvers.set(sessionId, resolve);
   });
 }
 
 export function createApp(): express.Express {
   const app = express();
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.text({ type: "application/json" }));
   app.use(express.json());
 
-  app.post("/twilio/voice", async (req: Request, res: Response) => {
+  app.post("/vapi/webhook", async (req: Request, res: Response) => {
     try {
-      const callSid = req.body.CallSid as string;
-      const sessionId = (req.query.sessionId as string) ?? "";
-
-      console.log(`[voice] Call answered. CallSid=${callSid} SessionId=${sessionId}`);
-
-      const state = findState(sessionId, callSid);
-      if (!state) {
-        console.error(`[voice] No session found for ${sessionId}`);
-        res.type("text/xml").send("<Response><Hangup/></Response>");
+      const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+      const signature =
+        (req.headers["x-vapi-signature"] as string | undefined) ??
+        (req.headers["vapi-signature"] as string | undefined);
+      if (!verifyVapiWebhookSignature(rawBody, signature)) {
+        res.status(401).json({ ok: false, error: "invalid signature" });
         return;
       }
 
-      state.callSid = callSid;
-      state.callStartedAt = Date.now();
-      sessions.set(callSid, state);
+      const payload = JSON.parse(rawBody || "{}") as Record<string, any>;
+      const eventType = extractEventType(payload);
+      const callId = extractCallId(payload);
+      const sessionId = extractSessionId(payload, callId);
 
-      const twiml = await handleVoiceWebhook(state, _baseUrl);
-      res.type("text/xml").send(twiml);
-    } catch (err) {
-      console.error("[voice] Error:", err);
-      res.type("text/xml").send("<Response><Hangup/></Response>");
-    }
-  });
-
-  app.post("/twilio/gather", async (req: Request, res: Response) => {
-    try {
-      const callSid =
-        (req.query.callSid as string) ?? (req.body.CallSid as string);
-      const speechResult = req.body.SpeechResult as string | undefined;
-      const digits = req.body.Digits as string | undefined;
-
-      console.log(
-        `[gather] CallSid=${callSid} Speech="${speechResult ?? ""}" Digits="${digits ?? ""}"`,
-      );
-
-      const state = sessions.get(callSid);
-      if (!state) {
-        console.error(`[gather] No session for CallSid=${callSid}`);
-        res.type("text/xml").send("<Response><Hangup/></Response>");
+      if (!sessionId) {
+        console.warn("[vapi/webhook] Missing sessionId in payload metadata.");
+        res.sendStatus(200);
         return;
       }
 
-      const result = await processGather(
-        state,
-        {
-          speechResult,
-          digits,
-          callSid,
-          rawPayload: req.body as Record<string, unknown>,
-        },
-        _baseUrl,
-      );
+      const runtime = sessions.get(sessionId);
+      if (!runtime) {
+        console.warn(`[vapi/webhook] Session runtime not registered: ${sessionId}`);
+        res.sendStatus(200);
+        return;
+      }
+      if (callId) {
+        runtime.callId = callId;
+        callIdToSessionId.set(callId, sessionId);
+      }
 
-      console.log(
-        `[gather] Phase=${state.phase} Turn=${state.totalTurnCount} Done=${result.done}`,
-      );
+      const turn = extractTurn(payload);
+      if (turn?.text) {
+        runtime.turnIndex += 1;
+        const timing = extractTurnTiming(payload);
+        const wordCount = turn.text.split(/\s+/).filter(Boolean).length;
+        await supabase.from("turns").insert({
+          session_id: sessionId,
+          turn_index: runtime.turnIndex,
+          speaker: turn.speaker,
+          pillar_id: null,
+          lens: null,
+          phase: null,
+          prompt_text: turn.speaker === "agent" ? turn.text : null,
+          response_text: turn.speaker === "participant" ? turn.text : null,
+          start_ms: timing.startMs,
+          end_ms: timing.endMs,
+          raw_event_payload: payload,
+        });
+      }
 
-      res.type("text/xml").send(result.twiml);
+      const recording = extractRecording(payload);
+      if (recording.recordingUrl) runtime.recordingUrl = recording.recordingUrl;
+      if (recording.recordingSid) runtime.recordingSid = recording.recordingSid;
+
+      if (isCallEndedEvent(payload, eventType)) {
+        runtime.ended = true;
+        runtime.callEndedAt = Date.now();
+        runtime.endReason = extractEndReason(payload) ?? "completed";
+        const durationSec = Math.max(
+          1,
+          Math.round((runtime.callEndedAt - runtime.callStartedAt) / 1000),
+        );
+
+        await supabase
+          .from("sessions")
+          .update({
+            status: runtime.endReason === "completed" ? "completed" : "failed",
+            ended_at: new Date(runtime.callEndedAt).toISOString(),
+            duration_ms: runtime.callEndedAt - runtime.callStartedAt,
+          })
+          .eq("id", sessionId);
+
+        const resolver = callEndedResolvers.get(sessionId);
+        if (resolver) {
+          resolver({
+            sessionId,
+            callId: runtime.callId,
+            endReason: runtime.endReason,
+            durationSec,
+            recordingUrl: runtime.recordingUrl,
+            recordingSid: runtime.recordingSid,
+          });
+          callEndedResolvers.delete(sessionId);
+        }
+      }
+
+      res.sendStatus(200);
     } catch (err) {
-      console.error("[gather] Error:", err);
-      res.type("text/xml").send(
-        '<Response><Say voice="Polly.Joanna-Neural">Sorry, I had a technical issue. Thank you for your time.</Say><Hangup/></Response>',
-      );
+      console.error("[vapi/webhook] Error:", err);
+      res.sendStatus(200);
     }
   });
 
-  app.post("/twilio/status", async (req: Request, res: Response) => {
-    const callSid = req.body.CallSid as string;
-    const callStatus = req.body.CallStatus as string;
-    const duration = req.body.CallDuration as string | undefined;
-
-    console.log(
-      `[status] CallSid=${callSid} Status=${callStatus} Duration=${duration ?? "?"}s`,
-    );
-
-    const state = sessions.get(callSid);
-
-    if (
-      callStatus === "no-answer" ||
-      callStatus === "busy" ||
-      callStatus === "failed" ||
-      callStatus === "canceled"
-    ) {
-      if (state) {
-        state.callEnded = true;
-        state.endReason = callStatus;
-      }
-      resolveCallEnded?.();
-    }
-
-    if (callStatus === "completed") {
-      if (state) {
-        state.callEnded = true;
-        state.endReason = state.endReason ?? "completed";
-      }
-      resolveCallEnded?.();
-    }
-
-    res.sendStatus(200);
-  });
-
-  app.post("/twilio/recording", async (req: Request, res: Response) => {
-    const recordingSid = req.body.RecordingSid as string;
-    const recordingUrl = req.body.RecordingUrl as string;
-    const durationStr = req.body.RecordingDuration as string | undefined;
-    const status = req.body.RecordingStatus as string;
-
-    console.log(
-      `[recording] Sid=${recordingSid} Status=${status} Duration=${durationStr ?? "?"}s`,
-    );
-
-    if (status === "completed" && recordingUrl) {
-      resolveRecordingReady?.({
-        recordingSid,
-        recordingUrl,
-        durationSec: parseFloat(durationStr ?? "0"),
-      });
-    }
-
-    res.sendStatus(200);
+  app.get("/webhook-url", (_req: Request, res: Response) => {
+    res.json({ webhook: `${_baseUrl}/vapi/webhook` });
   });
 
   app.get("/health", (_req: Request, res: Response) => {
@@ -167,12 +173,173 @@ export function createApp(): express.Express {
   return app;
 }
 
-function findState(
-  sessionId: string,
-  _callSid: string,
-): InterviewState | undefined {
-  for (const s of sessions.values()) {
-    if (s.sessionId === sessionId) return s;
+function extractEventType(payload: Record<string, any>): string {
+  return (
+    payload.message?.type ??
+    payload.type ??
+    payload.event ??
+    payload.messageType ??
+    "unknown"
+  );
+}
+
+function extractCallId(payload: Record<string, any>): string | null {
+  return (
+    payload.call?.id ??
+    payload.message?.call?.id ??
+    payload.callId ??
+    payload.message?.callId ??
+    null
+  );
+}
+
+function extractSessionId(
+  payload: Record<string, any>,
+  callId: string | null,
+): string | null {
+  const metadataSessionId =
+    payload.metadata?.sessionId ??
+    payload.call?.metadata?.sessionId ??
+    payload.message?.metadata?.sessionId ??
+    payload.message?.call?.metadata?.sessionId ??
+    null;
+  if (metadataSessionId) return metadataSessionId;
+  if (callId && callIdToSessionId.has(callId)) return callIdToSessionId.get(callId)!;
+  return null;
+}
+
+function extractTurnTiming(payload: Record<string, any>): {
+  startMs: number | null;
+  endMs: number | null;
+} {
+  const sfs =
+    payload.message?.secondsFromStart ??
+    payload.secondsFromStart ??
+    null;
+  const dur =
+    payload.message?.duration ??
+    payload.duration ??
+    null;
+
+  if (sfs == null) return { startMs: null, endMs: null };
+  const startMs = Math.round(Number(sfs) * 1000);
+  const endMs = dur != null ? Math.round((Number(sfs) + Number(dur)) * 1000) : null;
+  return { startMs, endMs };
+}
+
+function extractTurn(payload: Record<string, any>): {
+  speaker: "agent" | "participant";
+  text: string | null;
+} | null {
+  const transcriptPayload =
+    payload.message?.transcript ??
+    payload.transcript ??
+    payload.message?.text ??
+    payload.text ??
+    null;
+
+  let text: string | null = null;
+  let role: string | null = null;
+
+  if (typeof transcriptPayload === "string") {
+    text = transcriptPayload;
+  } else if (transcriptPayload && typeof transcriptPayload === "object") {
+    text =
+      transcriptPayload.text ??
+      transcriptPayload.content ??
+      transcriptPayload.transcript ??
+      null;
+    role =
+      transcriptPayload.role ??
+      transcriptPayload.speaker ??
+      transcriptPayload.source ??
+      null;
   }
-  return undefined;
+
+  if (!text || !text.trim()) return null;
+  const normalized = String(role ?? payload.message?.role ?? payload.role ?? "").toLowerCase();
+
+  if (normalized.includes("system")) return null;
+
+  const speaker: "agent" | "participant" =
+    normalized.includes("assistant") || normalized.includes("agent") || normalized.includes("bot")
+      ? "agent"
+      : "participant";
+
+  return { speaker, text: text.trim() };
+}
+
+function extractRecording(payload: Record<string, any>): {
+  recordingUrl: string | null;
+  recordingSid: string | null;
+} {
+  const recordingUrl =
+    payload.recordingUrl ??
+    payload.call?.recordingUrl ??
+    payload.call?.artifact?.recordingUrl ??
+    payload.message?.call?.artifact?.recordingUrl ??
+    null;
+  const recordingSid =
+    payload.recordingSid ??
+    payload.call?.recordingSid ??
+    payload.call?.artifact?.recordingSid ??
+    payload.message?.call?.artifact?.recordingSid ??
+    null;
+  return {
+    recordingUrl: recordingUrl ? String(recordingUrl) : null,
+    recordingSid: recordingSid ? String(recordingSid) : null,
+  };
+}
+
+function extractEndReason(payload: Record<string, any>): string | null {
+  return (
+    payload.endedReason ??
+    payload.message?.endedReason ??
+    payload.status ??
+    payload.message?.status ??
+    payload.call?.status ??
+    payload.message?.call?.status ??
+    null
+  );
+}
+
+function isCallEndedEvent(payload: Record<string, any>, eventType: string): boolean {
+  const status = String(
+    payload.status ??
+      payload.message?.status ??
+      payload.call?.status ??
+      payload.message?.call?.status ??
+      "",
+  ).toLowerCase();
+  const type = String(eventType).toLowerCase();
+
+  return (
+    status === "ended" ||
+    status === "completed" ||
+    status === "failed" ||
+    status === "busy" ||
+    status === "no-answer" ||
+    type.includes("end-of-call") ||
+    type.includes("call-ended") ||
+    type.includes("hang") ||
+    type.includes("status-update")
+  ) &&
+    (status !== "in-progress" && status !== "queued");
+}
+
+export function cleanupSessionRuntime(sessionId: string) {
+  const runtime = sessions.get(sessionId);
+  if (runtime?.callId) {
+    callIdToSessionId.delete(runtime.callId);
+  }
+  sessions.delete(sessionId);
+  callEndedResolvers.delete(sessionId);
+}
+
+export function getSessionRuntime(sessionId: string): SessionRuntime | null {
+  return sessions.get(sessionId) ?? null;
+}
+
+function _noop(_req: Request, res: Response) {
+    res.sendStatus(200);
 }

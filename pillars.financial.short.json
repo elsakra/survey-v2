@@ -1,0 +1,24 @@
+{
+  "title": "Short Financial Situation Interview",
+  "context": "Conducting a qualitative research study on financial wellness and money management habits among working adults in the US. The goal is to understand real lived experiences, not just surface-level attitudes.",
+  "pillars": [
+    {
+      "id": "p1",
+      "question": "How would you describe your current financial situation month-to-month?"
+    },
+    {
+      "id": "p2",
+      "question": "What is the biggest source of financial stress or uncertainty for you right now?"
+    },
+    {
+      "id": "p3",
+      "question": "What changes have you made recently to manage spending, saving, or debt?"
+    }
+  ],
+  "tone": {
+    "style": "warm, respectful, non-judgmental, concise"
+  },
+  "constraints": {
+    "prefer_quantification": true
+  }
+}

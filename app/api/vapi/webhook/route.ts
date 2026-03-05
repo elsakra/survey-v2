@@ -1,0 +1,257 @@
+import { NextResponse } from "next/server";
+import crypto from "crypto";
+import { createServiceClient } from "@/lib/supabase/server";
+
+export async function POST(request: Request) {
+  try {
+    const rawBody = await request.text();
+
+    const signature =
+      request.headers.get("x-vapi-signature") ??
+      request.headers.get("vapi-signature");
+    if (!verifySignature(rawBody, signature)) {
+      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+    }
+
+    const payload = JSON.parse(rawBody || "{}") as Record<string, any>;
+    const eventType = extractEventType(payload);
+    const callId = extractCallId(payload);
+    const sessionId = extractSessionId(payload);
+    const contactId = extractContactId(payload);
+
+    if (!sessionId) {
+      return new NextResponse(null, { status: 200 });
+    }
+
+    const supabase = createServiceClient();
+
+    const turn = extractTurn(payload);
+    if (turn?.text) {
+      const { count } = await supabase
+        .from("turns")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", sessionId);
+
+      const turnIndex = (count ?? 0) + 1;
+      const timing = extractTurnTiming(payload);
+
+      await supabase.from("turns").insert({
+        session_id: sessionId,
+        turn_index: turnIndex,
+        speaker: turn.speaker,
+        pillar_id: null,
+        lens: null,
+        phase: null,
+        prompt_text: turn.speaker === "agent" ? turn.text : null,
+        response_text: turn.speaker === "participant" ? turn.text : null,
+        start_ms: timing.startMs,
+        end_ms: timing.endMs,
+        raw_event_payload: payload,
+      });
+    }
+
+    const recording = extractRecording(payload);
+    if (recording.recordingUrl) {
+      await supabase
+        .from("recordings")
+        .upsert(
+          {
+            session_id: sessionId,
+            storage_url: recording.recordingUrl,
+            provider: "vapi",
+            duration_ms: null,
+          },
+          { onConflict: "session_id" },
+        );
+    }
+
+    if (isCallEndedEvent(payload, eventType)) {
+      const endReason = extractEndReason(payload) ?? "completed";
+      const status = endReason === "completed" || endReason === "ended" ? "completed" : "failed";
+
+      await supabase
+        .from("sessions")
+        .update({
+          status,
+          ended_at: new Date().toISOString(),
+        })
+        .eq("id", sessionId);
+
+      if (contactId) {
+        if (status === "completed") {
+          await supabase
+            .from("contacts")
+            .update({ status: "completed", session_id: sessionId })
+            .eq("id", contactId);
+        }
+
+        await supabase
+          .from("call_attempts")
+          .update({
+            status: status === "completed" ? "completed" : "failed",
+            ended_at: new Date().toISOString(),
+            session_id: sessionId,
+          })
+          .eq("call_id", callId);
+      }
+
+      const vapiMessages = extractVapiMessages(payload);
+      if (vapiMessages.length > 0) {
+        const plainText = vapiMessages
+          .map((m: any) => `${m.role === "assistant" ? "Interviewer" : "Participant"}: ${m.content ?? m.text ?? ""}`)
+          .join("\n\n");
+
+        await supabase.from("transcripts").insert({
+          session_id: sessionId,
+          transcript_type: "plain_text",
+          content: plainText,
+        });
+
+        await supabase.from("transcripts").insert({
+          session_id: sessionId,
+          transcript_type: "turns",
+          content: JSON.stringify(vapiMessages),
+        });
+      }
+
+      const analysis = extractAnalysis(payload);
+      if (analysis) {
+        await supabase.from("transcripts").insert({
+          session_id: sessionId,
+          transcript_type: "vapi_analysis",
+          content: JSON.stringify(analysis),
+        });
+      }
+    }
+
+    return new NextResponse(null, { status: 200 });
+  } catch (err) {
+    console.error("[vapi/webhook] Error:", err);
+    return new NextResponse(null, { status: 200 });
+  }
+}
+
+function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
+  const secret = process.env.VAPI_WEBHOOK_SECRET;
+  if (!secret) return true;
+  if (!signatureHeader) return true;
+
+  const digest = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const cleanHeader = signatureHeader.replace(/^sha256=/, "");
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(digest, "utf8"),
+      Buffer.from(cleanHeader, "utf8"),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function extractEventType(payload: Record<string, any>): string {
+  return payload.message?.type ?? payload.type ?? payload.event ?? "unknown";
+}
+
+function extractCallId(payload: Record<string, any>): string | null {
+  return payload.call?.id ?? payload.message?.call?.id ?? payload.callId ?? null;
+}
+
+function extractSessionId(payload: Record<string, any>): string | null {
+  return (
+    payload.metadata?.sessionId ??
+    payload.call?.metadata?.sessionId ??
+    payload.message?.metadata?.sessionId ??
+    payload.message?.call?.metadata?.sessionId ??
+    null
+  );
+}
+
+function extractContactId(payload: Record<string, any>): string | null {
+  return (
+    payload.metadata?.contactId ??
+    payload.call?.metadata?.contactId ??
+    payload.message?.metadata?.contactId ??
+    payload.message?.call?.metadata?.contactId ??
+    null
+  );
+}
+
+function extractTurnTiming(payload: Record<string, any>) {
+  const sfs = payload.message?.secondsFromStart ?? payload.secondsFromStart ?? null;
+  const dur = payload.message?.duration ?? payload.duration ?? null;
+  if (sfs == null) return { startMs: null, endMs: null };
+  const startMs = Math.round(Number(sfs) * 1000);
+  const endMs = dur != null ? Math.round((Number(sfs) + Number(dur)) * 1000) : null;
+  return { startMs, endMs };
+}
+
+function extractTurn(payload: Record<string, any>) {
+  const tp = payload.message?.transcript ?? payload.transcript ?? payload.message?.text ?? payload.text ?? null;
+  let text: string | null = null;
+  let role: string | null = null;
+
+  if (typeof tp === "string") {
+    text = tp;
+  } else if (tp && typeof tp === "object") {
+    text = tp.text ?? tp.content ?? tp.transcript ?? null;
+    role = tp.role ?? tp.speaker ?? null;
+  }
+
+  if (!text?.trim()) return null;
+  const normalized = String(role ?? payload.message?.role ?? payload.role ?? "").toLowerCase();
+  if (normalized.includes("system")) return null;
+
+  const speaker: "agent" | "participant" =
+    normalized.includes("assistant") || normalized.includes("agent") || normalized.includes("bot")
+      ? "agent"
+      : "participant";
+
+  return { speaker, text: text.trim() };
+}
+
+function extractRecording(payload: Record<string, any>) {
+  const url =
+    payload.recordingUrl ??
+    payload.call?.recordingUrl ??
+    payload.call?.artifact?.recordingUrl ??
+    payload.message?.call?.artifact?.recordingUrl ??
+    null;
+  return { recordingUrl: url ? String(url) : null };
+}
+
+function extractEndReason(payload: Record<string, any>): string | null {
+  return (
+    payload.endedReason ?? payload.message?.endedReason ?? payload.status ??
+    payload.message?.status ?? payload.call?.status ?? null
+  );
+}
+
+function isCallEndedEvent(payload: Record<string, any>, eventType: string): boolean {
+  const status = String(
+    payload.status ?? payload.message?.status ?? payload.call?.status ?? "",
+  ).toLowerCase();
+  const type = String(eventType).toLowerCase();
+
+  return (
+    (status === "ended" || status === "completed" || status === "failed" ||
+      status === "busy" || status === "no-answer" ||
+      type.includes("end-of-call") || type.includes("call-ended") || type.includes("status-update")) &&
+    status !== "in-progress" && status !== "queued"
+  );
+}
+
+function extractVapiMessages(payload: Record<string, any>): Array<Record<string, any>> {
+  const messages =
+    payload.call?.messages ?? payload.message?.call?.messages ??
+    payload.messages ?? payload.artifact?.messages ?? [];
+  return Array.isArray(messages)
+    ? messages.filter((m: any) => m.role !== "system")
+    : [];
+}
+
+function extractAnalysis(payload: Record<string, any>) {
+  const analysis =
+    payload.call?.analysis ?? payload.message?.call?.analysis ??
+    payload.analysis ?? payload.artifact?.analysis ?? null;
+  return analysis;
+}

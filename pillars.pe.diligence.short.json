@@ -1,0 +1,26 @@
+{
+  "title": "PE Due Diligence Employee Interview",
+  "context": "Private equity due diligence interview with a current employee. Primary objective: capture a factual, story-driven view of operating health, leadership and execution quality, decision dynamics, risk trajectory, and where performance can realistically improve in the next 12 months.",
+  "interviewer_name": "Sarah",
+  "org_name": "a management consulting firm",
+  "pillars": [
+    {
+      "id": "p1",
+      "question": "What does a typical week look like for you and your team?"
+    },
+    {
+      "id": "p2",
+      "question": "Can you tell me about a recent big decision or project that stands out?"
+    },
+    {
+      "id": "p3",
+      "question": "If you were thinking about the next year, what feels like the biggest risk or challenge?"
+    }
+  ],
+  "tone": {
+    "style": "warm, neutral, professional, concise"
+  },
+  "constraints": {
+    "prefer_quantification": true
+  }
+}

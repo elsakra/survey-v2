@@ -1,5 +1,10 @@
 import OpenAI from "openai";
 import fs from "fs";
+import { File as NodeFile } from "node:buffer";
+
+if (!(globalThis as any).File) {
+  (globalThis as any).File = NodeFile;
+}
 
 export interface STTSegment {
   start: number;
