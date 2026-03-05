@@ -33,20 +33,32 @@ export async function POST(
     return NextResponse.json({ error: "No pending contacts" }, { status: 400 });
   }
 
-  await supabase
+  const { error: activateError } = await supabase
     .from("campaigns")
     .update({ status: "active" })
     .eq("id", campaignId);
 
+  if (activateError) {
+    console.error("Failed to set campaign active:", activateError);
+    return NextResponse.json({ error: "Failed to launch campaign" }, { status: 500 });
+  }
+
   try {
-    await inngest.send({
+    const sendResult = await inngest.send({
       name: "campaign/launch",
       data: { campaignId },
     });
+    return NextResponse.json({ success: true, pendingContacts: count, sendResult });
   } catch (err) {
     console.error("Inngest send failed:", err);
-    return NextResponse.json({ success: true, pendingContacts: count, warning: "Call scheduling may be delayed" });
+    // Roll back status so UI reflects that launch did not fully start.
+    await supabase
+      .from("campaigns")
+      .update({ status: "draft" })
+      .eq("id", campaignId);
+    return NextResponse.json(
+      { error: "Failed to enqueue campaign launch in Inngest. Please retry." },
+      { status: 502 },
+    );
   }
-
-  return NextResponse.json({ success: true, pendingContacts: count });
 }

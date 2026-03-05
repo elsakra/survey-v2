@@ -11,6 +11,8 @@ interface Message {
   receivedAt: string;
 }
 
+type ParsedRole = "assistant" | "user" | null;
+
 interface VoiceTestError {
   title: string;
   message: string;
@@ -128,8 +130,16 @@ export function VoiceTest({
     setMessages((prev) => [...prev, message]);
   }, []);
 
-  function normalizeRole(input: unknown): "assistant" | "user" {
+  function normalizeRole(input: unknown): ParsedRole {
     const role = String(input ?? "").toLowerCase();
+    if (
+      role.includes("system") ||
+      role.includes("tool") ||
+      role.includes("developer") ||
+      role.includes("instruction")
+    ) {
+      return null;
+    }
     if (
       role.includes("assistant") ||
       role.includes("agent") ||
@@ -140,7 +150,38 @@ export function VoiceTest({
     ) {
       return "assistant";
     }
-    return "user";
+    if (
+      role.includes("user") ||
+      role.includes("human") ||
+      role.includes("participant") ||
+      role.includes("interviewee") ||
+      role.includes("caller")
+    ) {
+      return "user";
+    }
+    return null;
+  }
+
+  function isLikelyInstructionBlock(content: string): boolean {
+    const lower = content.toLowerCase();
+    return (
+      content.length > 260 &&
+      (lower.includes("mandatory opener sequence") ||
+        lower.includes("you never reveal you are an ai") ||
+        lower.includes("persona"))
+    );
+  }
+
+  function resolveRole(roleInput: unknown, fallbackRole: ParsedRole = null): ParsedRole {
+    const parsed = normalizeRole(roleInput);
+    return parsed ?? fallbackRole;
+  }
+
+  function roleFromMessageType(typeInput: unknown): ParsedRole {
+    const type = String(typeInput ?? "").toLowerCase();
+    if (type.includes("assistant")) return "assistant";
+    if (type.includes("user")) return "user";
+    return null;
   }
 
   function pushTranscriptLine(
@@ -148,10 +189,13 @@ export function VoiceTest({
     contentInput: unknown,
     timingSource: any,
     fallbackReceivedAt?: string,
+    fallbackRole: ParsedRole = null,
   ) {
     const content = String(contentInput ?? "").trim();
     if (!content) return;
-    const role = normalizeRole(roleInput);
+    const role = resolveRole(roleInput, fallbackRole);
+    if (!role) return;
+    if (isLikelyInstructionBlock(content)) return;
     const timing = parseMessageTiming(timingSource);
     const receivedAt = fallbackReceivedAt ?? new Date().toISOString();
     const dedupeKey = `${role}|${content}|${timing.startMs ?? "na"}|${timing.endMs ?? "na"}`;
@@ -172,7 +216,13 @@ export function VoiceTest({
 
     // Shape 1: direct transcript event.
     if (msg.type === "transcript" && msg.transcriptType === "final") {
-      pushTranscriptLine(msg.role ?? msg.speaker ?? msg.participant, msg.transcript ?? msg.text ?? msg.content, msg);
+      pushTranscriptLine(
+        msg.role ?? msg.speaker ?? msg.participant,
+        msg.transcript ?? msg.text ?? msg.content,
+        msg,
+        undefined,
+        "user",
+      );
       return;
     }
 
@@ -183,6 +233,8 @@ export function VoiceTest({
         payload.role ?? payload.speaker ?? payload.participant,
         payload.content ?? payload.text ?? payload.transcript,
         payload,
+        undefined,
+        roleFromMessageType(msg.type),
       );
     }
 
@@ -195,6 +247,7 @@ export function VoiceTest({
           entry?.content ?? entry?.text ?? entry?.transcript,
           entry,
           new Date().toISOString(),
+          null,
         );
       }
     }
