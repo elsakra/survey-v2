@@ -9,6 +9,20 @@ export const processCampaign = inngest.createFunction(
 
     const supabase = createServiceClient();
 
+    const campaign = await step.run("fetch-campaign-status", async () => {
+      const { data, error } = await supabase
+        .from("campaigns")
+        .select("id, status")
+        .eq("id", campaignId)
+        .single();
+      if (error || !data) throw error ?? new Error("Campaign not found");
+      return data;
+    });
+
+    if (campaign.status !== "active") {
+      return { message: `Campaign not active (${campaign.status})` };
+    }
+
     const contacts = await step.run("fetch-contacts", async () => {
       const { data, error } = await supabase
         .from("contacts")

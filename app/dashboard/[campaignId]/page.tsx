@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { LaunchButton } from "./launch-button";
+import { PauseResumeButton } from "./pause-resume-button";
 
 export default async function CampaignDetailPage({
   params,
@@ -96,6 +97,9 @@ export default async function CampaignDetailPage({
           >
             Manage Contacts
           </Link>
+          {(campaign.status === "active" || campaign.status === "paused") && (
+            <PauseResumeButton campaignId={campaignId} status={campaign.status} />
+          )}
           {campaign.status === "draft" && contactList.length > 0 && (
             <LaunchButton campaignId={campaignId} />
           )}

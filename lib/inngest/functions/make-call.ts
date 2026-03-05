@@ -61,6 +61,22 @@ export const makeCall = inngest.createFunction(
       return { contact, campaign };
     });
 
+    if (campaign.status === "paused") {
+      await step.run("reset-queued-on-pause", async () => {
+        if (contact.status === "queued") {
+          await supabase
+            .from("contacts")
+            .update({ status: "pending" })
+            .eq("id", contactId);
+        }
+      });
+      return { paused: true };
+    }
+
+    if (campaign.status !== "active") {
+      return { skipped: true, reason: `campaign_status_${campaign.status}` };
+    }
+
     if (contact.status === "completed") return { skipped: true };
     if (contact.attempts >= contact.max_attempts) {
       await step.run("mark-exhausted", async () => {
