@@ -38,13 +38,22 @@ export default async function CampaignDetailPage({
   const contactList = contacts ?? [];
   const isDraft = (campaign.status ?? "draft") === "draft";
   const hasContacts = contactList.length > 0;
-  const nextHref = hasContacts
+  const hasTested = Boolean(campaign.test_completed_at || campaign.test_skipped_at);
+  const nextHref = !hasTested
     ? `/dashboard/${campaignId}/test`
-    : `/dashboard/${campaignId}/contacts`;
-  const nextLabel = hasContacts ? "Step 1: Test Interview" : "Step 1: Add Contacts";
-  const nextHint = hasContacts
-    ? "Run a quick browser test call, refine your prompts, then launch."
-    : "Upload or add contacts first so you can launch calls.";
+    : !hasContacts
+      ? `/dashboard/${campaignId}/contacts`
+      : `/dashboard/${campaignId}`;
+  const nextLabel = !hasTested
+    ? "Step 1: Test Interview"
+    : !hasContacts
+      ? "Step 2: Add Contacts"
+      : "Step 3: Launch Campaign";
+  const nextHint = !hasTested
+    ? "Run a quick browser test call (or skip), then continue setup."
+    : !hasContacts
+      ? "Test complete. Add contacts so you can launch live calls."
+      : "Ready to launch: review contacts and start calls.";
 
   return (
     <div className="space-y-6">
@@ -103,13 +112,13 @@ export default async function CampaignDetailPage({
             <div className="bg-white border border-blue-100 rounded-lg p-3">
               <p className="text-xs font-medium text-blue-700">Step 1</p>
               <p className="text-sm text-gray-700 mt-1">
-                {hasContacts ? "Test interview in browser" : "Add your contact list"}
+                Test interview in browser (or skip)
               </p>
             </div>
             <div className="bg-white border border-blue-100 rounded-lg p-3">
               <p className="text-xs font-medium text-blue-700">Step 2</p>
               <p className="text-sm text-gray-700 mt-1">
-                {hasContacts ? "Add or review contacts" : "Run a test interview"}
+                Add or review contacts
               </p>
             </div>
             <div className="bg-white border border-blue-100 rounded-lg p-3">
@@ -118,12 +127,18 @@ export default async function CampaignDetailPage({
             </div>
           </div>
           <div className="flex gap-2">
-            <Link
-              href={nextHref}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {nextLabel}
-            </Link>
+            {nextLabel === "Step 3: Launch Campaign" ? (
+              <span className="px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
+                Ready to launch
+              </span>
+            ) : (
+              <Link
+                href={nextHref}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {nextLabel}
+              </Link>
+            )}
             {hasContacts && (
               <Link
                 href={`/dashboard/${campaignId}/contacts`}

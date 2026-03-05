@@ -119,7 +119,9 @@ export const makeCall = inngest.createFunction(
 
       const assistant = await createVapiAssistant({
         pillarsJson: campaign.pillars_json as CampaignPillarsJson,
+        maxDurationSec: campaign.max_duration_sec ?? undefined,
         instructions: campaign.instructions ?? undefined,
+        openingSentence: campaign.opening_sentence ?? undefined,
         webhookUrl,
       });
 

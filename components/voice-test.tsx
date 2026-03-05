@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface Message {
   role: "assistant" | "user";
@@ -101,13 +102,22 @@ function normalizeVoiceError(error: any): VoiceTestError {
   };
 }
 
-export function VoiceTest({ campaignId }: { campaignId: string }) {
+export function VoiceTest({
+  campaignId,
+  allowSkip = true,
+}: {
+  campaignId: string;
+  allowSkip?: boolean;
+}) {
+  const router = useRouter();
   const [status, setStatus] = useState<"idle" | "connecting" | "active" | "ended">("idle");
   const [ending, setEnding] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<VoiceTestError | null>(null);
   const vapiRef = useRef<any>(null);
   const mountedRef = useRef(true);
+  const hadLiveSessionRef = useRef(false);
+  const markedStatusRef = useRef<"completed" | "skipped" | null>(null);
 
   const addMessage = useCallback((role: "assistant" | "user", content: string) => {
     setMessages((prev) => {
@@ -124,6 +134,8 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
     setStatus("connecting");
     setMessages([]);
     setEnding(false);
+    hadLiveSessionRef.current = false;
+    markedStatusRef.current = null;
 
     try {
       if (!vapiRef.current) {
@@ -171,11 +183,21 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
         });
         vapi.on("call-start", () => {
           if (!mountedRef.current) return;
+          hadLiveSessionRef.current = true;
           setStatus("active");
           setEnding(false);
         });
-        vapi.on("call-end", () => {
+        vapi.on("call-end", async () => {
           if (!mountedRef.current) return;
+          if (hadLiveSessionRef.current && markedStatusRef.current !== "completed") {
+            markedStatusRef.current = "completed";
+            void fetch(`/api/campaigns/${campaignId}/test-status`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "completed" }),
+            });
+            router.refresh();
+          }
           setStatus("ended");
           setEnding(false);
         });
@@ -194,6 +216,25 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
       setError(normalizeVoiceError(e));
       setStatus("idle");
       setEnding(false);
+    }
+  }
+
+  async function skipTest() {
+    if (markedStatusRef.current === "skipped") {
+      router.push(`/dashboard/${campaignId}/contacts`);
+      return;
+    }
+
+    try {
+      markedStatusRef.current = "skipped";
+      await fetch(`/api/campaigns/${campaignId}/test-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "skipped" }),
+      });
+    } finally {
+      router.push(`/dashboard/${campaignId}/contacts`);
+      router.refresh();
     }
   }
 
@@ -252,6 +293,16 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
           </span>
         )}
       </div>
+
+      {allowSkip && (
+        <button
+          type="button"
+          onClick={skipTest}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Skip test and continue to contacts
+        </button>
+      )}
 
       {error && (
         <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">

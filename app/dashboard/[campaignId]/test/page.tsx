@@ -75,10 +75,22 @@ export default async function TestPage({
               {campaign.pillars_json.context}
             </li>
           )}
+          {campaign.max_duration_sec && (
+            <li>
+              <span className="font-medium text-gray-600">Max duration:</span>{" "}
+              {campaign.max_duration_sec}s
+            </li>
+          )}
+          {campaign.opening_sentence && (
+            <li>
+              <span className="font-medium text-gray-600">Opening sentence (verbatim):</span>{" "}
+              {campaign.opening_sentence}
+            </li>
+          )}
         </ul>
       </div>
 
-      <VoiceTest campaignId={campaignId} />
+      <VoiceTest campaignId={campaignId} allowSkip={campaign.status === "draft"} />
     </div>
   );
 }

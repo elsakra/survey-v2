@@ -157,6 +157,7 @@ export interface CreateAssistantOpts {
   maxDurationSec?: number;
   webhookUrl?: string;
   instructions?: string;
+  openingSentence?: string;
 }
 
 export async function createVapiAssistant(opts: CreateAssistantOpts) {
@@ -173,9 +174,10 @@ export async function createVapiAssistant(opts: CreateAssistantOpts) {
   const systemPrompt = buildSystemPrompt(pillarsPrompt, durationSec, name);
 
   const firstMessage =
-    `Hey, this is ${name} calling on behalf of ${org}. ` +
-    `We're doing a short confidential research conversation — should take about ${durationMin} minutes. ` +
-    `The call is recorded just so I don't miss anything. Is now an okay time?`;
+    opts.openingSentence?.trim() ||
+    (`Hey, this is ${name} calling on behalf of ${org}. ` +
+      `We're doing a short confidential research conversation — should take about ${durationMin} minutes. ` +
+      `The call is recorded just so I don't miss anything. Is now an okay time?`);
 
   const title = opts.pillarsJson.title ?? "Survey";
   const assistantName = `${title.slice(0, 28)} - Interview`;

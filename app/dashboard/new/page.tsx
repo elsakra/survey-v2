@@ -41,6 +41,8 @@ export default function NewCampaignPage() {
   const [title, setTitle] = useState("");
   const [context, setContext] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [maxDurationSec, setMaxDurationSec] = useState(420);
+  const [openingSentence, setOpeningSentence] = useState("");
   const [interviewerName, setInterviewerName] = useState("Sarah");
   const [orgName, setOrgName] = useState("");
   const [toneStyle, setToneStyle] = useState("warm, neutral, professional, concise");
@@ -88,6 +90,11 @@ export default function NewCampaignPage() {
       setSaving(false);
       return;
     }
+    if (maxDurationSec < 120 || maxDurationSec > 1800) {
+      setError("Max interview duration must be between 120 and 1800 seconds.");
+      setSaving(false);
+      return;
+    }
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -118,6 +125,8 @@ export default function NewCampaignPage() {
         pillars_json: pillarsJson,
         user_id: user.id,
         instructions: instructions || null,
+        max_duration_sec: maxDurationSec,
+        opening_sentence: openingSentence || null,
         calling_hours: { timezone, start: startHour, end: endHour, days },
         status: "draft",
       })
@@ -271,6 +280,33 @@ export default function NewCampaignPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Optional: any special instructions for the AI interviewer across all pillars"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Max Interview Duration (seconds)
+              </label>
+              <input
+                type="number"
+                min={120}
+                max={1800}
+                value={maxDurationSec}
+                onChange={(e) => setMaxDurationSec(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Opening Sentence (Verbatim, Optional)
+              </label>
+              <input
+                type="text"
+                value={openingSentence}
+                onChange={(e) => setOpeningSentence(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="If set, AI always uses this exact opener"
+              />
+            </div>
           </div>
         </section>
 

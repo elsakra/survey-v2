@@ -37,7 +37,9 @@ export async function POST(
     const pillarsJson = campaign.pillars_json as CampaignPillarsJson;
     const assistant = await createVapiAssistant({
       pillarsJson,
+      maxDurationSec: campaign.max_duration_sec ?? undefined,
       instructions: campaign.instructions ?? undefined,
+      openingSentence: campaign.opening_sentence ?? undefined,
     });
 
     return NextResponse.json({ assistantId: assistant.id });
