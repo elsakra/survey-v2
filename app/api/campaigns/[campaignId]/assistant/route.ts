@@ -6,25 +6,50 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ campaignId: string }> },
 ) {
-  const { campaignId } = await params;
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { campaignId } = await params;
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { data: campaign } = await supabase
-    .from("campaigns")
-    .select("*")
-    .eq("id", campaignId)
-    .eq("user_id", user.id)
-    .single();
+    if (!user) {
+      return NextResponse.json(
+        { code: "unauthorized", message: "Please sign in again." },
+        { status: 401 },
+      );
+    }
 
-  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("*")
+      .eq("id", campaignId)
+      .eq("user_id", user.id)
+      .single();
 
-  const pillarsJson = campaign.pillars_json as CampaignPillarsJson;
-  const assistant = await createVapiAssistant({
-    pillarsJson,
-    instructions: campaign.instructions ?? undefined,
-  });
+    if (!campaign) {
+      return NextResponse.json(
+        { code: "campaign_not_found", message: "Campaign not found." },
+        { status: 404 },
+      );
+    }
 
-  return NextResponse.json({ assistantId: assistant.id });
+    const pillarsJson = campaign.pillars_json as CampaignPillarsJson;
+    const assistant = await createVapiAssistant({
+      pillarsJson,
+      instructions: campaign.instructions ?? undefined,
+    });
+
+    return NextResponse.json({ assistantId: assistant.id });
+  } catch (error: any) {
+    console.error("[campaign assistant] Failed:", error);
+    return NextResponse.json(
+      {
+        code: "assistant_create_failed",
+        message: "Unable to start test interview right now. Please try again.",
+        details: error?.message ?? "unknown error",
+      },
+      { status: 502 },
+    );
+  }
 }

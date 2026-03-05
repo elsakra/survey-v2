@@ -7,10 +7,88 @@ interface Message {
   content: string;
 }
 
+interface VoiceTestError {
+  title: string;
+  message: string;
+  guidance?: string;
+  details?: string;
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function normalizeVoiceError(error: any): VoiceTestError {
+  const rawMessage =
+    error?.message ??
+    error?.body?.message ??
+    error?.body?.error ??
+    "Unknown error";
+  const message = String(rawMessage);
+  const details = safeStringify(error);
+  const lowered = `${message} ${details}`.toLowerCase();
+
+  if (lowered.includes("permission") || lowered.includes("notallowederror")) {
+    return {
+      title: "Microphone permission blocked",
+      message: "We couldn't access your microphone.",
+      guidance: "Allow microphone access for this site, then click Test Again.",
+      details,
+    };
+  }
+
+  if (lowered.includes("notfounderror") || lowered.includes("device") || lowered.includes("microphone")) {
+    return {
+      title: "No microphone detected",
+      message: "A working microphone was not found.",
+      guidance: "Connect/select a microphone in system settings and try again.",
+      details,
+    };
+  }
+
+  if (lowered.includes("network") || lowered.includes("failed to fetch")) {
+    return {
+      title: "Network issue",
+      message: "The browser could not reach the test-call service.",
+      guidance: "Check your connection, then retry.",
+      details,
+    };
+  }
+
+  if (lowered.includes("unauthorized") || lowered.includes("401")) {
+    return {
+      title: "Session expired",
+      message: "Your login session is no longer valid.",
+      guidance: "Sign in again and retry the test call.",
+      details,
+    };
+  }
+
+  if (lowered.includes("assistant") || lowered.includes("vapi") || lowered.includes("provider")) {
+    return {
+      title: "AI interviewer setup failed",
+      message: "We couldn't create the test interviewer for this campaign.",
+      guidance: "Check campaign configuration and try again in a few seconds.",
+      details,
+    };
+  }
+
+  return {
+    title: "Test call failed",
+    message: message === "Unknown error" ? "The test call did not start." : message,
+    guidance: "Try again. If this keeps happening, open Technical details and share it.",
+    details,
+  };
+}
+
 export function VoiceTest({ campaignId }: { campaignId: string }) {
   const [status, setStatus] = useState<"idle" | "connecting" | "active" | "ended">("idle");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<VoiceTestError | null>(null);
   const vapiRef = useRef<any>(null);
 
   const addMessage = useCallback((role: "assistant" | "user", content: string) => {
@@ -31,8 +109,18 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
     try {
       const res = await fetch(`/api/campaigns/${campaignId}/assistant`, { method: "POST" });
       if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error ?? "Failed to create assistant");
+        let body: any = null;
+        try {
+          body = await res.json();
+        } catch {
+          body = null;
+        }
+        throw {
+          source: "assistant-api",
+          status: res.status,
+          body,
+          message: body?.message ?? body?.error ?? "Failed to create assistant",
+        };
       }
       const { assistantId } = await res.json();
 
@@ -51,13 +139,13 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
       vapi.on("call-end", () => setStatus("ended"));
       vapi.on("error", (e: any) => {
         console.error("Vapi error:", e);
-        setError(e?.message ?? "Call error");
+        setError(normalizeVoiceError(e));
         setStatus("ended");
       });
 
       await vapi.start(assistantId);
     } catch (e: any) {
-      setError(e.message);
+      setError(normalizeVoiceError(e));
       setStatus("idle");
     }
   }
@@ -105,7 +193,19 @@ export function VoiceTest({ campaignId }: { campaignId: string }) {
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+          <p className="font-medium">{error.title}</p>
+          <p>{error.message}</p>
+          {error.guidance && <p className="text-red-600">{error.guidance}</p>}
+          {error.details && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-red-500">Technical details</summary>
+              <pre className="mt-2 text-[11px] bg-white border border-red-100 rounded p-2 overflow-auto text-red-700">
+                {error.details}
+              </pre>
+            </details>
+          )}
+        </div>
       )}
 
       {messages.length > 0 && (

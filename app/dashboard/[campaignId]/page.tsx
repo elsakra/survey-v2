@@ -36,6 +36,15 @@ export default async function CampaignDetailPage({
 
   const pillars = campaign.pillars_json?.pillars ?? [];
   const contactList = contacts ?? [];
+  const isDraft = (campaign.status ?? "draft") === "draft";
+  const hasContacts = contactList.length > 0;
+  const nextHref = hasContacts
+    ? `/dashboard/${campaignId}/test`
+    : `/dashboard/${campaignId}/contacts`;
+  const nextLabel = hasContacts ? "Step 1: Test Interview" : "Step 1: Add Contacts";
+  const nextHint = hasContacts
+    ? "Run a quick browser test call, refine your prompts, then launch."
+    : "Upload or add contacts first so you can launch calls.";
 
   return (
     <div className="space-y-6">
@@ -75,6 +84,49 @@ export default async function CampaignDetailPage({
           )}
         </div>
       </div>
+
+      {isDraft && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-blue-900 uppercase tracking-wider mb-2">
+            What To Do Next
+          </h2>
+          <p className="text-sm text-blue-800 mb-4">{nextHint}</p>
+          <div className="grid sm:grid-cols-3 gap-3 mb-4">
+            <div className="bg-white border border-blue-100 rounded-lg p-3">
+              <p className="text-xs font-medium text-blue-700">Step 1</p>
+              <p className="text-sm text-gray-700 mt-1">
+                {hasContacts ? "Test interview in browser" : "Add your contact list"}
+              </p>
+            </div>
+            <div className="bg-white border border-blue-100 rounded-lg p-3">
+              <p className="text-xs font-medium text-blue-700">Step 2</p>
+              <p className="text-sm text-gray-700 mt-1">
+                {hasContacts ? "Add or review contacts" : "Run a test interview"}
+              </p>
+            </div>
+            <div className="bg-white border border-blue-100 rounded-lg p-3">
+              <p className="text-xs font-medium text-blue-700">Step 3</p>
+              <p className="text-sm text-gray-700 mt-1">Launch campaign calls</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href={nextHref}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {nextLabel}
+            </Link>
+            {hasContacts && (
+              <Link
+                href={`/dashboard/${campaignId}/contacts`}
+                className="px-4 py-2 bg-white border border-blue-300 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                Review Contacts
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Research Context */}
       {campaign.pillars_json?.context && (
