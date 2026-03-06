@@ -52,11 +52,16 @@ export async function POST(
       name: "campaign/launch",
       data: { campaignId },
     });
+    console.info("[campaign launch] inngest.send raw result", {
+      campaignId,
+      sendResult: JSON.stringify(sendResult),
+      type: typeof sendResult,
+    });
     const eventIds = extractInngestEventIds(sendResult);
     if (eventIds.length === 0) {
       console.error("[campaign launch] Inngest send missing event IDs", {
         campaignId,
-        sendResult,
+        sendResult: JSON.stringify(sendResult),
       });
       const { error: rollbackError } = await supabase
         .from("campaigns")

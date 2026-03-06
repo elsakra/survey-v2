@@ -131,7 +131,9 @@ export const makeCall = inngest.createFunction(
         })
         .eq("id", contactId);
 
-      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"}/api/vapi/webhook`;
+      const base = process.env.NEXT_PUBLIC_APP_URL
+        ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const webhookUrl = `${base}/api/vapi/webhook`;
 
       const assistant = await createVapiAssistant({
         pillarsJson: campaign.pillars_json as CampaignPillarsJson,

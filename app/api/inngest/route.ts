@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, context: unknown) {
       hasEventKey: Boolean(process.env.INNGEST_EVENT_KEY),
       hasSigningKey: Boolean(process.env.INNGEST_SIGNING_KEY),
       functionCount: functions.length,
-      functionIds: functions.map((fn) => fn.id),
+      functionIds: functions.map((fn) => (typeof fn.id === "function" ? fn.id() : fn.id)),
       isVercel: Boolean(process.env.VERCEL),
       vercelEnv: process.env.VERCEL_ENV ?? "unknown",
     };

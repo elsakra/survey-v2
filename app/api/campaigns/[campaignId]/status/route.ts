@@ -92,12 +92,18 @@ export async function POST(
         name: "campaign/launch",
         data: { campaignId },
       });
+      console.info("[campaign status] inngest.send raw result", {
+        campaignId,
+        action,
+        sendResult: JSON.stringify(sendResult),
+        type: typeof sendResult,
+      });
       const eventIds = extractInngestEventIds(sendResult);
       if (eventIds.length === 0) {
         console.error("[campaign status] Inngest send missing event IDs", {
           campaignId,
           action,
-          sendResult,
+          sendResult: JSON.stringify(sendResult),
         });
         const rollbackStatus = campaign.status === "paused" ? "paused" : "active";
         const { error: rollbackError } = await supabase
