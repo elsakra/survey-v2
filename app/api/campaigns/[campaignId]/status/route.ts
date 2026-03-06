@@ -1,7 +1,7 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { queueCampaignContacts, processContact } from "@/lib/campaign/direct-launch";
+import { inngest } from "@/lib/inngest/client";
 
 type CampaignAction = "pause" | "resume" | "restart";
 
@@ -86,33 +86,15 @@ export async function POST(
     }
 
     try {
-      const result = await queueCampaignContacts(campaignId);
-
-      if (result.contacts.length > 0) {
-        after(async () => {
-          console.info("[campaign status] after() processing contacts", {
-            campaignId,
-            action,
-            count: result.contacts.length,
-          });
-          for (const contact of result.contacts) {
-            try {
-              await processContact(campaignId, contact.id);
-            } catch (err) {
-              console.error("[campaign status] after() contact error", {
-                contactId: contact.id,
-                error: err instanceof Error ? err.message : String(err),
-              });
-            }
-          }
-        });
-      }
-
-      console.info("[campaign status] direct launch result", { campaignId, action, scheduled: result.contacts.length });
-      return NextResponse.json({ success: true, status: "active", scheduled: result.contacts.length });
+      const sendResult = await inngest.send({
+        name: "campaign/launch",
+        data: { campaignId },
+      });
+      console.info("[campaign status] inngest.send result", { campaignId, action, sendResult: JSON.stringify(sendResult) });
+      return NextResponse.json({ success: true, status: "active" });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("[campaign status] direct launch failed", { campaignId, action, error: message });
+      console.error("[campaign status] inngest.send failed", { campaignId, action, error: message });
       const rollbackStatus = campaign.status === "paused" ? "paused" : "active";
       await supabase.from("campaigns").update({ status: rollbackStatus }).eq("id", campaignId);
       return NextResponse.json(
