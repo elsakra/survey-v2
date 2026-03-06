@@ -127,7 +127,44 @@ export function VoiceTest({
   const seenMessageKeysRef = useRef<Set<string>>(new Set());
 
   const addMessage = useCallback((message: Message) => {
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev) => {
+      if (prev.length === 0) return [message];
+
+      const last = prev[prev.length - 1];
+      if (last.role !== message.role) {
+        return [...prev, message];
+      }
+
+      const normalizeText = (value: string) => value.replace(/\s+/g, " ").trim();
+      const lastText = normalizeText(last.content);
+      const nextText = normalizeText(message.content);
+
+      if (!nextText) return prev;
+      if (nextText === lastText) return prev;
+      if (lastText.startsWith(nextText)) return prev; // stale shorter update
+
+      const closeInTime = (() => {
+        if (last.startMs != null && message.startMs != null) {
+          return Math.abs(message.startMs - last.startMs) <= 15000;
+        }
+        const lastAt = Date.parse(last.receivedAt);
+        const nextAt = Date.parse(message.receivedAt);
+        if (Number.isNaN(lastAt) || Number.isNaN(nextAt)) return true;
+        return Math.abs(nextAt - lastAt) <= 15000;
+      })();
+
+      // Vapi may stream incremental growing variants of the same turn.
+      if (closeInTime && nextText.startsWith(lastText)) {
+        const replacement: Message = {
+          ...message,
+          startMs: last.startMs ?? message.startMs ?? null,
+          endMs: message.endMs ?? last.endMs ?? null,
+        };
+        return [...prev.slice(0, -1), replacement];
+      }
+
+      return [...prev, message];
+    });
   }, []);
 
   function normalizeRole(input: unknown): ParsedRole {
