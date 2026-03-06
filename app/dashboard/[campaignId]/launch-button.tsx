@@ -7,7 +7,7 @@ export function LaunchButton({ campaignId }: { campaignId: string }) {
   const [launching, setLaunching] = useState(false);
   const [launched, setLaunched] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [eventIds, setEventIds] = useState<string[]>([]);
+  const [scheduled, setScheduled] = useState(0);
   const router = useRouter();
 
   async function handleLaunch() {
@@ -20,14 +20,7 @@ export function LaunchButton({ campaignId }: { campaignId: string }) {
       if (!res.ok || body?.success !== true) {
         setErrorMessage(body?.error ?? "Failed to launch campaign");
       } else {
-        const ids = Array.isArray(body?.eventIds)
-          ? body.eventIds.filter((id: unknown): id is string => typeof id === "string")
-          : [];
-        if (ids.length === 0) {
-          setErrorMessage("Launch was accepted but no Inngest event IDs were returned. Please retry.");
-          return;
-        }
-        setEventIds(ids);
+        setScheduled(body.scheduled ?? body.pendingContacts ?? 0);
         setLaunched(true);
         router.refresh();
       }
@@ -44,9 +37,9 @@ export function LaunchButton({ campaignId }: { campaignId: string }) {
         <span className="inline-block px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
           Campaign Launched
         </span>
-        {eventIds.length > 0 && (
+        {scheduled > 0 && (
           <p className="text-xs text-gray-500">
-            Inngest event IDs: {eventIds.join(", ")}
+            {scheduled} contact{scheduled === 1 ? "" : "s"} scheduled for calling.
           </p>
         )}
       </div>
