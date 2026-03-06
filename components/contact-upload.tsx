@@ -42,7 +42,16 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
         const rows = results.data as Array<Record<string, string>>;
         let added = 0;
         let skipped = 0;
+        let dupes = 0;
 
+        const supabase = createClient();
+        const { data: existing } = await supabase
+          .from("contacts")
+          .select("phone")
+          .eq("campaign_id", campaignId);
+        const existingPhones = new Set((existing ?? []).map((c) => c.phone));
+
+        const seen = new Set<string>();
         const contacts = rows
           .map((row) => {
             const rawPhone =
@@ -52,6 +61,11 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
               skipped++;
               return null;
             }
+            if (existingPhones.has(phone) || seen.has(phone)) {
+              dupes++;
+              return null;
+            }
+            seen.add(phone);
             return {
               campaign_id: campaignId,
               user_id: userId,
@@ -63,7 +77,6 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
           .filter(Boolean) as Array<Record<string, unknown>>;
 
         if (contacts.length > 0) {
-          const supabase = createClient();
           const { error: insertError } = await supabase.from("contacts").insert(contacts);
           if (insertError) {
             setError(insertError.message);
@@ -72,7 +85,10 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
           }
         }
 
-        setCsvResults(`Added ${added} contacts${skipped > 0 ? `, skipped ${skipped} (invalid phone)` : ""}`);
+        const parts = [`Added ${added} contacts`];
+        if (skipped > 0) parts.push(`skipped ${skipped} (invalid phone)`);
+        if (dupes > 0) parts.push(`skipped ${dupes} duplicate${dupes === 1 ? "" : "s"}`);
+        setCsvResults(parts.join(", "));
         setUploading(false);
         if (added > 0) onComplete();
         if (fileRef.current) fileRef.current.value = "";
@@ -95,6 +111,19 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
 
     setUploading(true);
     const supabase = createClient();
+
+    const { data: existing } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("campaign_id", campaignId)
+      .eq("phone", phone)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      setError("This phone number is already in this campaign.");
+      setUploading(false);
+      return;
+    }
+
     const { error: insertError } = await supabase.from("contacts").insert({
       campaign_id: campaignId,
       user_id: userId,

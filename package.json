@@ -10,7 +10,8 @@
     "interview": "tsx --tsconfig tsconfig.cli.json src/cli/interview.ts",
     "db:push": "supabase db push --linked",
     "db:types": "supabase gen types typescript --linked > src/db/types.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "inngest:sync": "curl -X PUT ${NEXT_PUBLIC_APP_URL}/api/inngest --fail-with-body"
   },
   "engines": {
     "node": ">=20"

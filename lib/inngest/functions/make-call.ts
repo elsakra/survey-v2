@@ -102,8 +102,7 @@ export const makeCall = inngest.createFunction(
         .from("sessions")
         .insert({
           campaign_id: campaignId,
-          phone_number: contact.phone,
-          pillars_snapshot: campaign.pillars_json,
+          to_number: contact.phone,
           status: "pending",
         })
         .select()
