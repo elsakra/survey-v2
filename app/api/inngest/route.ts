@@ -18,6 +18,8 @@ export async function GET(request: NextRequest, context: unknown) {
       app: "survey-v2",
       hasEventKey: Boolean(process.env.INNGEST_EVENT_KEY),
       hasSigningKey: Boolean(process.env.INNGEST_SIGNING_KEY),
+      eventKeyPrefix: process.env.INNGEST_EVENT_KEY?.slice(0, 8) ?? "unset",
+      signingKeyPrefix: process.env.INNGEST_SIGNING_KEY?.slice(0, 20) ?? "unset",
       functionCount: functions.length,
       functionIds: functions.map((fn) => (typeof fn.id === "function" ? fn.id() : fn.id)),
       isVercel: Boolean(process.env.VERCEL),
@@ -25,6 +27,20 @@ export async function GET(request: NextRequest, context: unknown) {
     };
     console.info("[inngest diagnostics]", diagnostics);
     return NextResponse.json(diagnostics);
+  }
+  if (url.searchParams.get("test-send") === "1") {
+    try {
+      const sendResult = await inngest.send({
+        name: "campaign/launch",
+        data: { campaignId: "00000000-0000-0000-0000-000000000000" },
+      });
+      console.info("[inngest test-send] result:", JSON.stringify(sendResult));
+      return NextResponse.json({ success: true, sendResult });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[inngest test-send] error:", msg);
+      return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    }
   }
   return inngestHandler.GET(request, context);
 }
