@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { launchCampaignDirect } from "@/lib/campaign/direct-launch";
+import { queueCampaignContacts, processContact } from "@/lib/campaign/direct-launch";
 
 type CampaignAction = "pause" | "resume" | "restart";
 
@@ -56,7 +56,6 @@ export async function POST(
         .update({ status: "paused" })
         .eq("id", campaignId);
 
-      // Release queued contacts back to pending so resume/restart can re-schedule cleanly.
       await service
         .from("contacts")
         .update({ status: "pending" })
@@ -87,9 +86,30 @@ export async function POST(
     }
 
     try {
-      const result = await launchCampaignDirect(campaignId);
-      console.info("[campaign status] direct launch result", { campaignId, action, result });
-      return NextResponse.json({ success: true, status: "active", scheduled: result.scheduled });
+      const result = await queueCampaignContacts(campaignId);
+
+      if (result.contacts.length > 0) {
+        after(async () => {
+          console.info("[campaign status] after() processing contacts", {
+            campaignId,
+            action,
+            count: result.contacts.length,
+          });
+          for (const contact of result.contacts) {
+            try {
+              await processContact(campaignId, contact.id);
+            } catch (err) {
+              console.error("[campaign status] after() contact error", {
+                contactId: contact.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            }
+          }
+        });
+      }
+
+      console.info("[campaign status] direct launch result", { campaignId, action, scheduled: result.contacts.length });
+      return NextResponse.json({ success: true, status: "active", scheduled: result.contacts.length });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("[campaign status] direct launch failed", { campaignId, action, error: message });
@@ -108,4 +128,3 @@ export async function POST(
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { launchCampaignDirect } from "@/lib/campaign/direct-launch";
+import { queueCampaignContacts, processContact } from "@/lib/campaign/direct-launch";
 
 export async function POST(
   _request: Request,
@@ -47,23 +48,41 @@ export async function POST(
   }
 
   try {
-    const result = await launchCampaignDirect(campaignId);
+    const result = await queueCampaignContacts(campaignId);
 
-    if (result.error) {
-      console.error("[campaign launch] direct launch error", { campaignId, error: result.error });
+    if (result.error || result.contacts.length === 0) {
+      console.error("[campaign launch] queue error", { campaignId, error: result.error });
       await supabase.from("campaigns").update({ status: "draft" }).eq("id", campaignId);
-      return NextResponse.json({ error: result.error }, { status: 502 });
+      return NextResponse.json({ error: result.error ?? "No contacts to call" }, { status: 502 });
     }
 
-    console.info("[campaign launch] direct launch started", {
+    after(async () => {
+      console.info("[campaign launch] after() processing contacts", {
+        campaignId,
+        count: result.contacts.length,
+      });
+      for (const contact of result.contacts) {
+        try {
+          await processContact(campaignId, contact.id);
+        } catch (err) {
+          console.error("[campaign launch] after() contact error", {
+            contactId: contact.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+      console.info("[campaign launch] after() done", { campaignId });
+    });
+
+    console.info("[campaign launch] responding with scheduled count", {
       campaignId,
-      scheduled: result.scheduled,
+      scheduled: result.contacts.length,
     });
 
     return NextResponse.json({
       success: true,
       pendingContacts: count,
-      scheduled: result.scheduled,
+      scheduled: result.contacts.length,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

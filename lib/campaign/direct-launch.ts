@@ -18,7 +18,7 @@ function getWebhookUrl(): string {
  * Process a single contact: create session, call attempt, Vapi assistant,
  * and place the outbound call. The Vapi webhook handles call completion.
  */
-async function processContact(
+export async function processContact(
   campaignId: string,
   contactId: string,
 ): Promise<void> {
@@ -139,11 +139,11 @@ async function processContact(
 }
 
 /**
- * Directly launch a campaign: mark contacts as queued, then place calls
- * for each contact. Runs without Inngest — Vapi webhook handles completion.
+ * Queue pending contacts for a campaign. Returns the contact list
+ * so the caller can process them (e.g. via after()).
  */
-export async function launchCampaignDirect(campaignId: string): Promise<{
-  scheduled: number;
+export async function queueCampaignContacts(campaignId: string): Promise<{
+  contacts: { id: string; phone: string }[];
   error?: string;
 }> {
   const supabase = createServiceClient();
@@ -155,7 +155,7 @@ export async function launchCampaignDirect(campaignId: string): Promise<{
     .eq("status", "pending");
 
   if (error || !contacts || contacts.length === 0) {
-    return { scheduled: 0, error: error?.message ?? "No pending contacts" };
+    return { contacts: [], error: error?.message ?? "No pending contacts" };
   }
 
   await supabase
@@ -166,19 +166,10 @@ export async function launchCampaignDirect(campaignId: string): Promise<{
       contacts.map((c) => c.id),
     );
 
-  console.info("[direct-launch] processing contacts", {
+  console.info("[direct-launch] contacts queued", {
     campaignId,
     count: contacts.length,
   });
 
-  for (const contact of contacts) {
-    processContact(campaignId, contact.id).catch((err) => {
-      console.error("[direct-launch] unhandled error for contact", {
-        contactId: contact.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
-  }
-
-  return { scheduled: contacts.length };
+  return { contacts };
 }
