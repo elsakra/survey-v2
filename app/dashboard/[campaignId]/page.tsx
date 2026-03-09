@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { LaunchButton } from "./launch-button";
 import { PauseResumeButton } from "./pause-resume-button";
 import { CloneButton } from "./clone-button";
+import { CampaignAnalysis } from "./campaign-analysis";
 
 export default async function CampaignDetailPage({
   params,
@@ -232,21 +233,8 @@ export default async function CampaignDetailPage({
         </div>
       )}
 
-      {/* Analysis Placeholder */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
-          Analysis
-        </h3>
-        <button
-          disabled
-          className="px-4 py-2 bg-gray-100 text-gray-400 text-sm font-medium rounded-lg cursor-not-allowed"
-        >
-          Generate Analysis (Coming Soon)
-        </button>
-        <p className="text-xs text-gray-400 mt-2">
-          Batch transcript analysis will be available here once enough interviews are completed.
-        </p>
-      </div>
+      {/* Campaign Analysis */}
+      <CampaignAnalysis campaignId={campaignId} />
     </div>
   );
 }

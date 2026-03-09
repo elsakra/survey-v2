@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import { inngest } from "@/lib/inngest/client";
 
 export async function POST(request: Request) {
   try {
@@ -52,17 +53,10 @@ export async function POST(request: Request) {
 
     const recording = extractRecording(payload);
     if (recording.recordingUrl) {
-      await supabase
-        .from("recordings")
-        .upsert(
-          {
-            session_id: sessionId,
-            storage_url: recording.recordingUrl,
-            provider: "vapi",
-            duration_ms: null,
-          },
-          { onConflict: "session_id" },
-        );
+      await supabase.from("recordings").insert({
+        session_id: sessionId,
+        recording_url: recording.recordingUrl,
+      });
     }
 
     if (isCallEndedEvent(payload, eventType)) {
@@ -102,26 +96,49 @@ export async function POST(request: Request) {
           .map((m) => `${m.speaker === "interviewer" ? "Interviewer" : "Interviewee"}: ${m.text}`)
           .join("\n\n");
 
-        await supabase.from("transcripts").insert({
+        const { error: ptErr } = await supabase.from("transcripts").insert({
           session_id: sessionId,
-          transcript_type: "plain_text",
-          content: plainText,
+          type: "plain_text",
+          content_json: { text: plainText },
         });
+        if (ptErr) console.error("[vapi/webhook] plain_text insert error:", ptErr.message);
 
-        await supabase.from("transcripts").insert({
+        const { error: tErr } = await supabase.from("transcripts").insert({
           session_id: sessionId,
-          transcript_type: "turns",
-          content: JSON.stringify(normalizedMessages),
+          type: "turns",
+          content_json: { turns: normalizedMessages },
         });
+        if (tErr) console.error("[vapi/webhook] turns insert error:", tErr.message);
       }
 
       const analysis = extractAnalysis(payload);
       if (analysis) {
-        await supabase.from("transcripts").insert({
+        const { error: aErr } = await supabase.from("transcripts").insert({
           session_id: sessionId,
-          transcript_type: "vapi_analysis",
-          content: JSON.stringify(analysis),
+          type: "vapi_analysis",
+          content_json: analysis,
         });
+        if (aErr) console.error("[vapi/webhook] vapi_analysis insert error:", aErr.message);
+      }
+
+      if (vapiMessages.length > 0) {
+        const { data: sess } = await supabase
+          .from("sessions")
+          .select("campaign_id")
+          .eq("id", sessionId)
+          .single();
+
+        if (sess?.campaign_id) {
+          try {
+            await inngest.send({
+              name: "call/analyze",
+              data: { sessionId, campaignId: sess.campaign_id },
+            });
+            console.info("[vapi/webhook] queued pillar analysis", { sessionId, campaignId: sess.campaign_id });
+          } catch (err) {
+            console.error("[vapi/webhook] failed to queue analysis:", err instanceof Error ? err.message : err);
+          }
+        }
       }
     }
 

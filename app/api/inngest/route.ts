@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { inngest } from "@/lib/inngest/client";
 import { processCampaign } from "@/lib/inngest/functions/process-campaign";
 import { makeCall } from "@/lib/inngest/functions/make-call";
+import { analyzeCall } from "@/lib/inngest/functions/analyze-call";
 
-const functions = [processCampaign, makeCall];
+const functions = [processCampaign, makeCall, analyzeCall];
 
 const inngestHandler = serve({
   client: inngest,
