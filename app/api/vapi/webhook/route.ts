@@ -60,6 +60,17 @@ export async function POST(request: Request) {
     }
 
     if (isCallEndedEvent(payload, eventType)) {
+      console.info("[vapi/webhook] end-of-call", {
+        eventType,
+        sessionId,
+        contactId,
+        payloadKeys: Object.keys(payload),
+        messageKeys: payload.message ? Object.keys(payload.message) : null,
+        hasArtifact: Boolean(payload.message?.artifact),
+        artifactKeys: payload.message?.artifact ? Object.keys(payload.message.artifact) : null,
+        msgCount: extractVapiMessages(payload).length,
+      });
+
       const endReason = extractEndReason(payload) ?? "completed";
       const status = endReason === "completed" || endReason === "ended" ? "completed" : "failed";
 
@@ -233,6 +244,7 @@ function extractRecording(payload: Record<string, any>) {
     payload.call?.recordingUrl ??
     payload.call?.artifact?.recordingUrl ??
     payload.message?.call?.artifact?.recordingUrl ??
+    payload.message?.artifact?.recordingUrl ??
     null;
   return { recordingUrl: url ? String(url) : null };
 }
@@ -260,8 +272,11 @@ function isCallEndedEvent(payload: Record<string, any>, eventType: string): bool
 
 function extractVapiMessages(payload: Record<string, any>): Array<Record<string, any>> {
   const messages =
-    payload.call?.messages ?? payload.message?.call?.messages ??
-    payload.messages ?? payload.artifact?.messages ?? [];
+    payload.call?.messages ??
+    payload.message?.call?.messages ??
+    payload.message?.artifact?.messages ??
+    payload.messages ??
+    payload.artifact?.messages ?? [];
   return Array.isArray(messages)
     ? messages.filter((m: any) => m.role !== "system")
     : [];
@@ -321,7 +336,10 @@ function normalizeTranscriptMessages(
 
 function extractAnalysis(payload: Record<string, any>) {
   const analysis =
-    payload.call?.analysis ?? payload.message?.call?.analysis ??
-    payload.analysis ?? payload.artifact?.analysis ?? null;
+    payload.call?.analysis ??
+    payload.message?.call?.analysis ??
+    payload.message?.artifact?.analysis ??
+    payload.analysis ??
+    payload.artifact?.analysis ?? null;
   return analysis;
 }
