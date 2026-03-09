@@ -5,6 +5,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PillarSummary {
   pillarId: string;
@@ -67,6 +68,12 @@ export function CampaignAnalysis({ campaignId }: { campaignId: string }) {
         <Button onClick={loadAnalysis} disabled={loading}>
           {loading ? "Loading..." : "Generate Analysis"}
         </Button>
+        {loading && (
+          <div className="mt-4 grid gap-2">
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+          </div>
+        )}
         {error && (
           <Alert variant="danger" className="mt-2 text-xs">{error}</Alert>
         )}
@@ -93,6 +100,13 @@ export function CampaignAnalysis({ campaignId }: { campaignId: string }) {
           </button>
         </div>
       </div>
+
+      {loading && (
+        <div className="grid gap-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      )}
 
       {/* Per-pillar coverage */}
       <div className="space-y-3">

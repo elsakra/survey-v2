@@ -27,10 +27,15 @@
   --color-info-soft: #ebf2ff;
   --color-info-strong: #294cad;
   --color-info-border: #c9d9ff;
+  --text-display: 1.875rem;
+  --text-title: 1.375rem;
+  --text-section: 0.9375rem;
   --radius-sm: 0.4rem;
   --radius-md: 0.65rem;
   --radius-lg: 0.95rem;
+  --radius-xl: 1.15rem;
   --shadow-card: 0 1px 1px rgba(15, 23, 42, 0.03), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.07);
 }
 
 body {
@@ -44,7 +49,21 @@ button {
   transition: all 160ms ease;
 }
 
+button:active {
+  transform: translateY(0.5px) scale(0.997);
+}
+
 ::selection {
   background: #dfe8ff;
   color: #0f172a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

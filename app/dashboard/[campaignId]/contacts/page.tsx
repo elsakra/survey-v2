@@ -57,6 +57,8 @@ export default function ContactsPage() {
   }, [loadContacts]);
 
   const statuses = ["all", "pending", "queued", "attempted", "completed", "failed", "exhausted"];
+  const completed = contacts.filter((c) => c.status === "completed").length;
+  const pending = contacts.filter((c) => c.status === "pending" || c.status === "queued").length;
 
   return (
     <div className="space-y-6">
@@ -67,6 +69,27 @@ export default function ContactsPage() {
         &larr; Back to campaign
       </Link>
       <SectionHeader title="Contacts" description="Upload and manage who gets called in this campaign." />
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Total contacts</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{contacts.length}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Pending</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{pending}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Completed</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{completed}</p>
+          </CardBody>
+        </Card>
+      </div>
 
       <Card>
         <CardBody>
@@ -113,9 +136,10 @@ export default function ContactsPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden">
+          <div className="max-h-[560px] overflow-auto">
           <table className="w-full min-w-[860px]">
             <thead>
-              <tr className="border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]/60">
+              <tr className="sticky top-0 z-10 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]/95 backdrop-blur">
                 <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Name</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Phone</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Status</th>
@@ -154,6 +178,7 @@ export default function ContactsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>

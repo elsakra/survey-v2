@@ -4,6 +4,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { CloneCampaignButton } from "@/components/clone-campaign-button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Button } from "@/components/ui/button";
+import { Table, TableShell, Td, Th } from "@/components/ui/table";
 
 export default async function DashboardPage() {
   const supabase = await createServerClient();
@@ -15,22 +17,55 @@ export default async function DashboardPage() {
     .eq("user_id", user!.id)
     .order("created_at", { ascending: false });
 
+  const campaignList = campaigns ?? [];
+  const activeCount = campaignList.filter((c: any) => c.status === "active").length;
+  const draftCount = campaignList.filter((c: any) => (c.status ?? "draft") === "draft").length;
+  const pausedCount = campaignList.filter((c: any) => c.status === "paused").length;
+
   return (
     <div className="space-y-6">
       <SectionHeader
         title="Campaigns"
-        description="Create, test, and launch AI-led interview studies."
+        description="Manage interview studies, monitor progress, and launch calls."
         actions={(
-          <Link
-            href="/dashboard/new"
-            className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-4 text-sm font-medium text-white hover:brightness-95"
-          >
-            New Campaign
+          <Link href="/dashboard/new">
+            <Button>New Campaign</Button>
           </Link>
         )}
       />
 
-      {!campaigns || campaigns.length === 0 ? (
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Total campaigns</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{campaignList.length}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Active now</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{activeCount}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{pausedCount} paused</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Drafts to launch</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{draftCount}</p>
+          </CardBody>
+        </Card>
+      </div>
+
+      <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-1">
+        <button className="rounded-[calc(var(--radius-md)-2px)] bg-[var(--color-surface-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)]">
+          Overview
+        </button>
+        <button className="rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+          All campaigns
+        </button>
+      </div>
+
+      {!campaignList.length ? (
         <Card>
           <CardBody className="py-16 text-center">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">No campaigns yet</h3>
@@ -48,66 +83,56 @@ export default async function DashboardPage() {
           </CardBody>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex items-center justify-between">
+        <Card>
+          <CardHeader className="flex items-center justify-between pb-3">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
               Recent campaigns
             </h3>
             <span className="text-xs text-[var(--color-text-muted)]">
-              {campaigns.length} total
+              {campaignList.length} total
             </span>
           </CardHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px]">
+          <TableShell className="rounded-none border-0 border-t border-[var(--color-border-subtle)]">
+            <Table className="min-w-[760px]">
               <thead>
-                <tr className="border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]/60">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                    Campaign
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                    Pillars
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                    Created
-                  </th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                    Actions
-                  </th>
+                <tr className="border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]/70">
+                  <Th className="px-5">Campaign</Th>
+                  <Th className="px-5">Status</Th>
+                  <Th className="px-5">Pillars</Th>
+                  <Th className="px-5">Created</Th>
+                  <Th className="px-5 text-right">Actions</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border-subtle)]">
-                {campaigns.map((c: any) => (
+                {campaignList.map((c: any) => (
                   <tr key={c.id} className="group hover:bg-[var(--color-surface-subtle)]/50">
-                    <td className="px-5 py-4">
+                    <Td className="px-5">
                       <Link
                         href={`/dashboard/${c.id}`}
                         className="text-sm font-semibold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)]"
                       >
                         {c.title ?? c.pillars_json?.title ?? "Untitled Campaign"}
                       </Link>
-                    </td>
-                    <td className="px-5 py-4">
+                    </Td>
+                    <Td className="px-5">
                       <StatusBadge status={c.status ?? "draft"} />
-                    </td>
-                    <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
+                    </Td>
+                    <Td className="px-5 text-[var(--color-text-secondary)]">
                       {c.pillars_json?.pillars?.length ?? 0}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
+                    </Td>
+                    <Td className="px-5 text-[var(--color-text-secondary)]">
                       {new Date(c.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-5 py-4">
+                    </Td>
+                    <Td className="px-5">
                       <div className="flex justify-end">
                         <CloneCampaignButton campaignId={c.id} />
                       </div>
-                    </td>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+            </Table>
+          </TableShell>
         </Card>
       )}
     </div>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
 import { Alert } from "@/components/ui/alert";
+import { Table, TableShell, Td, Th } from "@/components/ui/table";
 
 export default async function CampaignDetailPage({
   params,
@@ -103,6 +104,35 @@ export default async function CampaignDetailPage({
           </div>
         </div>
 
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Pillars</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{pillars.length}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Contacts</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{contactList.length}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Completed</p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{completedCount ?? 0}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Readiness</p>
+            <p className="text-base font-semibold text-[var(--color-text-primary)]">
+              {!hasTested ? "Needs test call" : !hasContacts ? "Needs contacts" : "Ready to launch"}
+            </p>
+          </CardBody>
+        </Card>
+      </div>
+
       {isDraft && (
         <Alert variant="info" className="p-5">
           <h2 className="text-sm font-semibold text-blue-900 uppercase tracking-wider mb-2">
@@ -142,36 +172,35 @@ export default async function CampaignDetailPage({
         </Alert>
       )}
 
-      {/* Research Context */}
       {campaign.pillars_json?.context && (
         <Card>
           <CardBody>
-          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
-            Research Context
-          </h3>
-          <p className="text-sm text-[var(--color-text-primary)]">{campaign.pillars_json.context}</p>
+            <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+              Research Context
+            </h3>
+            <p className="text-sm text-[var(--color-text-primary)]">{campaign.pillars_json.context}</p>
           </CardBody>
         </Card>
       )}
 
       <Card>
         <CardBody>
-        <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-          Pillar Questions
-        </h3>
-        <div className="space-y-3">
-          {pillars.map((p: any, i: number) => (
-            <div key={i} className="flex gap-3">
-              <span className="text-xs font-medium text-[var(--color-text-muted)] mt-0.5 w-6">{i + 1}.</span>
-              <p className="text-sm text-[var(--color-text-primary)]">{p.question}</p>
-            </div>
-          ))}
-        </div>
+          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+            Pillar Questions
+          </h3>
+          <div className="space-y-2">
+            {pillars.map((p: any, i: number) => (
+              <div key={i} className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]/40 px-3 py-2.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Pillar {i + 1}</p>
+                <p className="mt-1 text-sm text-[var(--color-text-primary)]">{p.question}</p>
+              </div>
+            ))}
+          </div>
         </CardBody>
       </Card>
 
       {contactList.length > 0 && (
-        <Card className="overflow-hidden">
+        <Card>
           <CardHeader className="flex justify-between items-center">
             <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">
               Contacts
@@ -183,39 +212,41 @@ export default async function CampaignDetailPage({
               View all
             </Link>
           </CardHeader>
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[var(--color-surface-subtle)] border-b border-[var(--color-border-subtle)]">
-                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Name</th>
-                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Phone</th>
-                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Status</th>
-                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Attempts</th>
-                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Transcript</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border-subtle)]">
-              {contactList.slice(0, 10).map((c: any) => (
-                <tr key={c.id} className="hover:bg-[var(--color-surface-subtle)]/45">
-                  <td className="px-4 py-2 text-sm">{c.name ?? "—"}</td>
-                  <td className="px-4 py-2 text-sm text-[var(--color-text-secondary)]">{c.phone}</td>
-                  <td className="px-4 py-2"><StatusBadge status={c.status} /></td>
-                  <td className="px-4 py-2 text-sm text-[var(--color-text-secondary)]">{c.attempts}/{c.max_attempts}</td>
-                  <td className="px-4 py-2">
-                    {c.session_id ? (
-                      <Link
-                        href={`/dashboard/${campaignId}/contacts/${c.id}`}
-                        className="text-sm font-medium text-[var(--color-accent)] hover:underline"
-                      >
-                        View
-                      </Link>
-                    ) : (
-                      <span className="text-sm text-[var(--color-text-muted)]">—</span>
-                    )}
-                  </td>
+          <TableShell className="rounded-none border-0 border-t border-[var(--color-border-subtle)]">
+            <Table className="min-w-[760px]">
+              <thead>
+                <tr className="bg-[var(--color-surface-subtle)] border-b border-[var(--color-border-subtle)]">
+                  <Th>Name</Th>
+                  <Th>Phone</Th>
+                  <Th>Status</Th>
+                  <Th>Attempts</Th>
+                  <Th>Transcript</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border-subtle)]">
+                {contactList.slice(0, 10).map((c: any) => (
+                  <tr key={c.id} className="hover:bg-[var(--color-surface-subtle)]/45">
+                    <Td>{c.name ?? "—"}</Td>
+                    <Td className="text-[var(--color-text-secondary)]">{c.phone}</Td>
+                    <Td><StatusBadge status={c.status} /></Td>
+                    <Td className="text-[var(--color-text-secondary)]">{c.attempts}/{c.max_attempts}</Td>
+                    <Td>
+                      {c.session_id ? (
+                        <Link
+                          href={`/dashboard/${campaignId}/contacts/${c.id}`}
+                          className="text-sm font-medium text-[var(--color-accent)] hover:underline"
+                        >
+                          View
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-[var(--color-text-muted)]">—</span>
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableShell>
         </Card>
       )}
 

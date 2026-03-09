@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnalysisDisplay, type PillarAnalysis } from "./analysis-display";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
 
 interface Message {
   role: "assistant" | "user";
@@ -496,7 +497,9 @@ export function VoiceTest({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3">
+      <Card>
+        <CardBody className="space-y-4">
+      <div className="flex flex-wrap gap-3">
         {status === "idle" || (status === "ended" && !completedThisRun) ? (
           <Button onClick={startTest}>
             {status === "ended" ? "Test Again" : "Start Test Conversation"}
@@ -537,6 +540,8 @@ export function VoiceTest({
           Skip test and continue to contacts
         </button>
       )}
+        </CardBody>
+      </Card>
 
       {error && (
         <Alert variant="danger" className="space-y-1">
@@ -555,7 +560,13 @@ export function VoiceTest({
       )}
 
       {messages.length > 0 && (
-        <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] divide-y divide-[var(--color-border-subtle)] max-h-[500px] overflow-y-auto">
+        <Card className="overflow-hidden">
+          <CardHeader className="py-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+              Live Transcript
+            </h3>
+          </CardHeader>
+        <div className="bg-[var(--color-surface-elevated)] divide-y divide-[var(--color-border-subtle)] max-h-[500px] overflow-y-auto">
           {messages.map((m, i) => (
             <div key={i} className="px-4 py-3 flex gap-3">
               <div className="w-24 shrink-0 mt-0.5">
@@ -572,6 +583,7 @@ export function VoiceTest({
             </div>
           ))}
         </div>
+        </Card>
       )}
 
       {status === "ended" && messages.length > 0 && (
