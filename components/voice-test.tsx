@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { AnalysisDisplay, type PillarAnalysis } from "./analysis-display";
 
 interface Message {
   role: "assistant" | "user";
@@ -120,6 +121,9 @@ export function VoiceTest({
   const [completedThisRun, setCompletedThisRun] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<VoiceTestError | null>(null);
+  const [analysis, setAnalysis] = useState<PillarAnalysis | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const vapiRef = useRef<any>(null);
   const mountedRef = useRef(true);
   const hadLiveSessionRef = useRef(false);
@@ -328,6 +332,9 @@ export function VoiceTest({
     seenMessageKeysRef.current.clear();
     setEnding(false);
     setCompletedThisRun(false);
+    setAnalysis(null);
+    setAnalysisStatus("idle");
+    setAnalysisError(null);
     hadLiveSessionRef.current = false;
     markedStatusRef.current = null;
 
@@ -449,11 +456,38 @@ export function VoiceTest({
     }
   }
 
+  async function generateAnalysis() {
+    if (messages.length === 0) return;
+    setAnalysisStatus("loading");
+    setAnalysisError(null);
+
+    const transcript = messages
+      .map((m) => `${m.role === "assistant" ? "Interviewer" : "Interviewee"}: ${m.content}`)
+      .join("\n\n");
+
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/analyze-transcript`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Analysis failed (${res.status})`);
+      }
+      const result = await res.json();
+      setAnalysis(result);
+      setAnalysisStatus("done");
+    } catch (err: any) {
+      setAnalysisError(err?.message ?? "Analysis failed");
+      setAnalysisStatus("error");
+    }
+  }
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      // Best effort cleanup on unmount.
       vapiRef.current?.stop?.();
     };
   }, []);
@@ -548,6 +582,50 @@ export function VoiceTest({
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{m.content}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {status === "ended" && messages.length > 0 && (
+        <div className="space-y-4">
+          {analysisStatus === "idle" && (
+            <button
+              onClick={generateAnalysis}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Generate Analysis
+            </button>
+          )}
+
+          {analysisStatus === "loading" && (
+            <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <svg className="animate-spin h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Analyzing transcript against campaign pillars...
+            </div>
+          )}
+
+          {analysisStatus === "error" && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start justify-between gap-3">
+              <p>{analysisError ?? "Analysis failed"}</p>
+              <button
+                onClick={generateAnalysis}
+                className="text-sm text-red-600 hover:underline whitespace-nowrap"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {analysisStatus === "done" && analysis && (
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Analysis Preview
+              </h3>
+              <AnalysisDisplay analysis={analysis} />
+            </div>
+          )}
         </div>
       )}
 
