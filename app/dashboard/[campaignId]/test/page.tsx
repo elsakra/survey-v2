@@ -2,6 +2,9 @@ import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { VoiceTest } from "@/components/voice-test";
+import { Card, CardBody } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
+import { Alert } from "@/components/ui/alert";
 
 export default async function TestPage({
   params,
@@ -24,20 +27,19 @@ export default async function TestPage({
   const pillars = campaign.pillars_json?.pillars ?? [];
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl space-y-6">
       <Link
         href={`/dashboard/${campaignId}`}
-        className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block"
+        className="inline-block text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
       >
         &larr; Back to campaign
       </Link>
-      <h1 className="text-2xl font-semibold mb-2">Test Interview</h1>
-      <p className="text-sm text-gray-500 mb-6">
-        Talk to the AI interviewer through your browser to test and refine your campaign
-        configuration before launching calls.
-      </p>
+      <SectionHeader
+        title="Test Interview"
+        description="Run a live browser call to validate interviewer behavior and transcript analysis before launch."
+      />
 
-      <div className="bg-blue-50 rounded-xl border border-blue-200 p-5 mb-6">
+      <Alert variant="info">
         <h2 className="text-sm font-semibold text-blue-900 uppercase tracking-wider mb-3">
           Before You Start
         </h2>
@@ -56,39 +58,41 @@ export default async function TestPage({
             <span className="font-semibold"> Test Again</span>.
           </p>
         </div>
-      </div>
+      </Alert>
 
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 mb-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Current Configuration</h3>
-        <ul className="text-sm text-gray-500 space-y-1">
+      <Card>
+        <CardBody>
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Current Configuration</h3>
+          <ul className="space-y-1 text-sm text-[var(--color-text-secondary)]">
           <li>
-            <span className="font-medium text-gray-600">Title:</span>{" "}
+            <span className="font-medium text-[var(--color-text-primary)]">Title:</span>{" "}
             {campaign.title ?? campaign.pillars_json?.title ?? "Untitled"}
           </li>
           <li>
-            <span className="font-medium text-gray-600">Pillars:</span>{" "}
+            <span className="font-medium text-[var(--color-text-primary)]">Pillars:</span>{" "}
             {pillars.map((p: any) => p.question).join(" | ")}
           </li>
           {campaign.pillars_json?.context && (
             <li>
-              <span className="font-medium text-gray-600">Context:</span>{" "}
+              <span className="font-medium text-[var(--color-text-primary)]">Context:</span>{" "}
               {campaign.pillars_json.context}
             </li>
           )}
           {campaign.max_duration_sec && (
             <li>
-              <span className="font-medium text-gray-600">Max duration:</span>{" "}
+              <span className="font-medium text-[var(--color-text-primary)]">Max duration:</span>{" "}
               {campaign.max_duration_sec}s
             </li>
           )}
           {campaign.opening_sentence && (
             <li>
-              <span className="font-medium text-gray-600">Opening sentence (verbatim):</span>{" "}
+              <span className="font-medium text-[var(--color-text-primary)]">Opening sentence (verbatim):</span>{" "}
               {campaign.opening_sentence}
             </li>
           )}
-        </ul>
-      </div>
+          </ul>
+        </CardBody>
+      </Card>
 
       <VoiceTest campaignId={campaignId} allowSkip={campaign.status === "draft"} />
     </div>

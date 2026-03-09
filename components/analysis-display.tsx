@@ -46,17 +46,17 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
         {analysis.pillars.map((p) => (
           <div
             key={p.pillarId}
-            className="bg-white rounded-xl border border-gray-200 p-5 space-y-3"
+            className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5 space-y-3"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="text-xs font-mono text-gray-400">{p.pillarId}</span>
-                <h4 className="text-sm font-medium text-gray-800 mt-0.5">{p.question}</h4>
+                <span className="text-xs font-mono text-[var(--color-text-muted)]">{p.pillarId}</span>
+                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mt-0.5">{p.question}</h4>
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <span
                   className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                    p.answered ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    p.answered ? "bg-[var(--color-success-soft)] text-[var(--color-success-strong)]" : "bg-[var(--color-danger-soft)] text-[var(--color-danger-strong)]"
                   }`}
                 >
                   {p.answered ? "Answered" : "Not answered"}
@@ -73,8 +73,8 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
 
             {p.answered && (
               <>
-                <p className="text-sm text-gray-700">{p.participantAnswer}</p>
-                <div className="text-xs text-gray-500">
+                <p className="text-sm text-[var(--color-text-primary)]">{p.participantAnswer}</p>
+                <div className="text-xs text-[var(--color-text-secondary)]">
                   {DEPTH_LABEL[p.depth] ?? p.depth}
                 </div>
               </>
@@ -85,7 +85,7 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
                 {p.keyQuotes.map((q, qi) => (
                   <blockquote
                     key={qi}
-                    className="text-sm text-gray-600 border-l-2 border-blue-300 pl-3 italic"
+                    className="text-sm text-[var(--color-text-secondary)] border-l-2 border-[var(--color-info-border)] pl-3 italic"
                   >
                     &ldquo;{q}&rdquo;
                   </blockquote>
@@ -96,8 +96,8 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+      <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
+        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
           Call Quality
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -113,47 +113,47 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
               <span
                 className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
                   analysis.callQuality[key]
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
+                    ? "bg-[var(--color-success-soft)] text-[var(--color-success-strong)]"
+                    : "bg-[var(--color-danger-soft)] text-[var(--color-danger-strong)]"
                 }`}
               >
                 {analysis.callQuality[key] ? "\u2713" : "\u2717"}
               </span>
-              <span className="text-gray-700">{label}</span>
+              <span className="text-[var(--color-text-primary)]">{label}</span>
             </div>
           ))}
         </div>
-        <div className="mt-3 text-sm text-gray-500">
+        <div className="mt-3 text-sm text-[var(--color-text-secondary)]">
           Participant engagement:{" "}
-          <span className="font-medium text-gray-700">
+          <span className="font-medium text-[var(--color-text-primary)]">
             {analysis.participantEngagement}
           </span>
         </div>
       </div>
 
       {analysis.overallThemes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
             Themes
           </h3>
           <ul className="list-disc list-inside space-y-1">
             {analysis.overallThemes.map((theme, i) => (
-              <li key={i} className="text-sm text-gray-700">{theme}</li>
+              <li key={i} className="text-sm text-[var(--color-text-primary)]">{theme}</li>
             ))}
           </ul>
         </div>
       )}
 
       {analysis.notableQuotes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
             Notable Quotes
           </h3>
           <div className="space-y-2">
             {analysis.notableQuotes.map((q, i) => (
               <blockquote
                 key={i}
-                className="text-sm text-gray-600 border-l-2 border-blue-300 pl-3 italic"
+                className="text-sm text-[var(--color-text-secondary)] border-l-2 border-[var(--color-info-border)] pl-3 italic"
               >
                 &ldquo;{q}&rdquo;
               </blockquote>

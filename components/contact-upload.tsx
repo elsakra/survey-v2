@@ -3,6 +3,10 @@
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Papa from "papaparse";
+import { Tabs } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 interface ContactUploadProps {
   campaignId: string;
@@ -145,31 +149,21 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
-        <button
-          onClick={() => setMode("csv")}
-          className={`text-sm font-medium px-3 py-1.5 rounded-lg ${
-            mode === "csv" ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          CSV Upload
-        </button>
-        <button
-          onClick={() => setMode("manual")}
-          className={`text-sm font-medium px-3 py-1.5 rounded-lg ${
-            mode === "manual" ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Manual Entry
-        </button>
-      </div>
+      <Tabs
+        value={mode}
+        onChange={(value) => setMode(value as "csv" | "manual")}
+        items={[
+          { value: "csv", label: "CSV Upload" },
+          { value: "manual", label: "Manual Entry" },
+        ]}
+      />
 
       {mode === "csv" ? (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">
-            Upload a CSV with columns: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">phone</code>,{" "}
-            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">name</code> (optional),{" "}
-            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">email</code> (optional)
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Upload a CSV with columns: <code className="rounded bg-[var(--color-surface-subtle)] px-1 py-0.5 text-xs">phone</code>,{" "}
+            <code className="rounded bg-[var(--color-surface-subtle)] px-1 py-0.5 text-xs">name</code> (optional),{" "}
+            <code className="rounded bg-[var(--color-surface-subtle)] px-1 py-0.5 text-xs">email</code> (optional)
           </p>
           <input
             ref={fileRef}
@@ -177,50 +171,43 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
             accept=".csv"
             onChange={handleCsvUpload}
             disabled={uploading}
-            className="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-medium file:bg-white file:text-gray-700 hover:file:bg-gray-50"
+            className="block text-sm text-[var(--color-text-secondary)] file:mr-4 file:rounded-[var(--radius-md)] file:border file:border-[var(--color-border)] file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--color-text-primary)] hover:file:bg-[var(--color-surface-subtle)]"
           />
           {csvResults && (
-            <p className="text-sm text-green-600">{csvResults}</p>
+            <p className="text-sm text-[var(--color-success-strong)]">{csvResults}</p>
           )}
         </div>
       ) : (
         <form onSubmit={handleManualAdd} className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
-            <input
+            <Input
               type="text"
               value={manualPhone}
               onChange={(e) => setManualPhone(e.target.value)}
               placeholder="Phone (+15551234567)"
               required
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <input
+            <Input
               type="text"
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
               placeholder="Name (optional)"
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <input
+            <Input
               type="email"
               value={manualEmail}
               onChange={(e) => setManualEmail(e.target.value)}
               placeholder="Email (optional)"
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button
-            type="submit"
-            disabled={uploading}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
+          <Button type="submit" disabled={uploading}>
             Add Contact
-          </button>
+          </Button>
         </form>
       )}
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>
+        <Alert variant="danger">{error}</Alert>
       )}
     </div>
   );

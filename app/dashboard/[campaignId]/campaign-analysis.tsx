@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Card, CardBody } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
 
 interface PillarSummary {
   pillarId: string;
@@ -47,50 +51,44 @@ export function CampaignAnalysis({ campaignId }: { campaignId: string }) {
   }
 
   const sentimentColor: Record<string, string> = {
-    positive: "bg-green-100 text-green-700",
-    negative: "bg-red-100 text-red-700",
-    neutral: "bg-gray-100 text-gray-600",
-    mixed: "bg-yellow-100 text-yellow-700",
+    positive: "success",
+    negative: "danger",
+    neutral: "neutral",
+    mixed: "warning",
   };
 
   if (!analysis) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+      <Card>
+        <CardBody>
+        <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
           Analysis
         </h3>
-        <button
-          onClick={loadAnalysis}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
+        <Button onClick={loadAnalysis} disabled={loading}>
           {loading ? "Loading..." : "Generate Analysis"}
-        </button>
+        </Button>
         {error && (
-          <p className="text-xs text-red-600 mt-2">{error}</p>
+          <Alert variant="danger" className="mt-2 text-xs">{error}</Alert>
         )}
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">
           Aggregates insights across all completed and analyzed interviews.
         </p>
-      </div>
+        </CardBody>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
           Campaign Analysis
         </h3>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-[var(--color-text-secondary)]">
             {analysis.interviewsAnalyzed} of {analysis.completedSessions} interviews analyzed
           </span>
-          <button
-            onClick={loadAnalysis}
-            disabled={loading}
-            className="text-xs text-blue-600 hover:underline disabled:opacity-50"
-          >
+          <button onClick={loadAnalysis} disabled={loading} className="text-xs text-[var(--color-accent)] hover:underline disabled:opacity-50">
             {loading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
@@ -99,22 +97,20 @@ export function CampaignAnalysis({ campaignId }: { campaignId: string }) {
       {/* Per-pillar coverage */}
       <div className="space-y-3">
         {analysis.pillars.map((p) => (
-          <div
-            key={p.pillarId}
-            className="bg-white rounded-xl border border-gray-200 p-4 space-y-2"
-          >
+          <Card key={p.pillarId}>
+            <CardBody className="space-y-2 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <span className="text-xs font-mono text-gray-400">{p.pillarId}</span>
-                <h4 className="text-sm font-medium text-gray-800 mt-0.5">{p.question}</h4>
+                <span className="text-xs font-mono text-[var(--color-text-muted)]">{p.pillarId}</span>
+                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mt-0.5">{p.question}</h4>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-[var(--color-text-secondary)]">
                   {p.coverage} answered ({p.coveragePercent}%)
                 </span>
-                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="w-16 h-1.5 bg-[var(--color-surface-subtle)] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-500 rounded-full"
+                    className="h-full bg-[var(--color-accent)] rounded-full"
                     style={{ width: `${p.coveragePercent}%` }}
                   />
                 </div>
@@ -123,14 +119,9 @@ export function CampaignAnalysis({ campaignId }: { campaignId: string }) {
 
             <div className="flex gap-1.5 flex-wrap">
               {Object.entries(p.sentimentDistribution).map(([sentiment, count]) => (
-                <span
-                  key={sentiment}
-                  className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                    sentimentColor[sentiment] ?? sentimentColor.neutral
-                  }`}
-                >
+                <Badge key={sentiment} variant={(sentimentColor[sentiment] as any) ?? "neutral"}>
                   {sentiment}: {count}
-                </span>
+                </Badge>
               ))}
             </div>
 
@@ -139,70 +130,74 @@ export function CampaignAnalysis({ campaignId }: { campaignId: string }) {
                 {p.sampleQuotes.slice(0, 3).map((q, qi) => (
                   <blockquote
                     key={qi}
-                    className="text-xs text-gray-500 border-l-2 border-blue-200 pl-2 italic"
+                    className="text-xs text-[var(--color-text-secondary)] border-l-2 border-[var(--color-info-border)] pl-2 italic"
                   >
                     &ldquo;{q}&rdquo;
                   </blockquote>
                 ))}
               </div>
             )}
-          </div>
+            </CardBody>
+          </Card>
         ))}
       </div>
 
       {/* Themes */}
       {analysis.topThemes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        <Card>
+          <CardBody className="p-4">
+          <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
             Top Themes
           </h4>
           <div className="flex flex-wrap gap-2">
             {analysis.topThemes.map((t, i) => (
-              <span
-                key={i}
-                className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium"
-              >
+              <Badge key={i} variant="info">
                 {t.theme} ({t.count})
-              </span>
+              </Badge>
             ))}
           </div>
-        </div>
+          </CardBody>
+        </Card>
       )}
 
       {/* Call quality rates */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+      <Card>
+        <CardBody className="p-4">
+        <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
           Call Quality
         </h4>
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(analysis.callQualityRates).map(([key, val]) => (
             <div key={key} className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">
+              <span className="text-[var(--color-text-secondary)]">
                 {key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
               </span>
-              <span className="font-medium text-gray-800">{val}</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{val}</span>
             </div>
           ))}
         </div>
-      </div>
+        </CardBody>
+      </Card>
 
       {/* Notable quotes */}
       {analysis.notableQuotes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        <Card>
+          <CardBody className="p-4">
+          <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
             Notable Quotes
           </h4>
           <div className="space-y-2">
             {analysis.notableQuotes.map((q, i) => (
               <blockquote
                 key={i}
-                className="text-sm text-gray-600 border-l-2 border-blue-300 pl-3 italic"
+                className="text-sm text-[var(--color-text-secondary)] border-l-2 border-[var(--color-info-border)] pl-3 italic"
               >
                 &ldquo;{q}&rdquo;
               </blockquote>
             ))}
           </div>
-        </div>
+          </CardBody>
+        </Card>
       )}
     </div>
   );

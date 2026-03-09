@@ -136,7 +136,7 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
             key={t}
             onClick={() => setTab(t)}
             className={`text-sm font-medium px-3 py-1.5 rounded-lg capitalize ${
-              tab === t ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-gray-700"
+              tab === t ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             }`}
           >
             {t}
@@ -145,38 +145,38 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
       </div>
 
       <div className="flex gap-2">
-        <button onClick={downloadTranscript} className="text-sm text-blue-600 hover:underline">
+        <button onClick={downloadTranscript} className="text-sm text-[var(--color-accent)] hover:underline">
           Download .txt
         </button>
-        <button onClick={downloadJSON} className="text-sm text-blue-600 hover:underline">
+        <button onClick={downloadJSON} className="text-sm text-[var(--color-accent)] hover:underline">
           Download .json
         </button>
       </div>
 
       {tab === "transcript" && (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+        <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] divide-y divide-[var(--color-border-subtle)] max-h-[600px] overflow-y-auto">
           {displayTurns.length > 0 ? (
             displayTurns.map((turn, i) => (
               <div key={i} className="px-4 py-3 flex gap-3">
                 <div className="w-28 shrink-0 mt-0.5">
                   <span
                     className={`block text-xs font-medium uppercase ${
-                      turn.speaker === "interviewer" ? "text-blue-600" : "text-gray-500"
+                      turn.speaker === "interviewer" ? "text-[var(--color-accent)]" : "text-[var(--color-text-secondary)]"
                     }`}
                   >
                     {turn.speaker === "interviewer" ? "Interviewer" : "Interviewee"}
                   </span>
-                  <span className="block text-[11px] text-gray-400 mt-0.5">
+                  <span className="block text-[11px] text-[var(--color-text-muted)] mt-0.5">
                     {formatTurnTimestamp(turn.startMs, turn.endMs)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{turn.text}</p>
+                <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">{turn.text}</p>
               </div>
             ))
           ) : plainText ? (
-            <div className="p-4 text-sm text-gray-700 whitespace-pre-wrap">{plainText}</div>
+            <div className="p-4 text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">{plainText}</div>
           ) : (
-            <div className="p-4 text-sm text-gray-400">No transcript available</div>
+            <div className="p-4 text-sm text-[var(--color-text-muted)]">No transcript available</div>
           )}
         </div>
       )}
@@ -187,20 +187,20 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
 
           {parsedAnalysis && (
             <details open={!pillarAnalysis}>
-              <summary className="text-sm font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none">
+              <summary className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider cursor-pointer select-none">
                 Vapi Auto-Analysis
               </summary>
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 mt-2">
+              <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5 space-y-4 mt-2">
                 {parsedAnalysis.summary && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Summary</h4>
-                    <p className="text-sm text-gray-700">{parsedAnalysis.summary}</p>
+                    <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-1">Summary</h4>
+                    <p className="text-sm text-[var(--color-text-primary)]">{parsedAnalysis.summary}</p>
                   </div>
                 )}
                 {parsedAnalysis.successEvaluation && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Evaluation</h4>
-                    <p className="text-sm text-gray-700">{parsedAnalysis.successEvaluation}</p>
+                    <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-1">Evaluation</h4>
+                    <p className="text-sm text-[var(--color-text-primary)]">{parsedAnalysis.successEvaluation}</p>
                   </div>
                 )}
               </div>
@@ -209,25 +209,25 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
 
           {parsedMetrics && (
             <details>
-              <summary className="text-sm font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none">
+              <summary className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider cursor-pointer select-none">
                 Call Metrics
               </summary>
-              <pre className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 overflow-auto mt-2">
+              <pre className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-surface-subtle)] rounded-lg p-3 overflow-auto mt-2">
                 {JSON.stringify(parsedMetrics, null, 2)}
               </pre>
             </details>
           )}
 
           {!parsedAnalysis && !pillarAnalysis && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-sm text-gray-400">No analysis data available</p>
+            <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
+              <p className="text-sm text-[var(--color-text-muted)]">No analysis data available</p>
             </div>
           )}
         </div>
       )}
 
       {tab === "raw" && (
-        <pre className="bg-white rounded-xl border border-gray-200 p-4 text-xs text-gray-600 overflow-auto max-h-[600px]">
+        <pre className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-4 text-xs text-[var(--color-text-secondary)] overflow-auto max-h-[600px]">
           {JSON.stringify(
             transcripts.map((t) => ({
               type: t.type,

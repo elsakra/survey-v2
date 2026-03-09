@@ -3,6 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AnalysisDisplay, type PillarAnalysis } from "./analysis-display";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 interface Message {
   role: "assistant" | "user";
@@ -496,44 +498,31 @@ export function VoiceTest({
     <div className="space-y-4">
       <div className="flex gap-3">
         {status === "idle" || (status === "ended" && !completedThisRun) ? (
-          <button
-            onClick={startTest}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
+          <Button onClick={startTest}>
             {status === "ended" ? "Test Again" : "Start Test Conversation"}
-          </button>
+          </Button>
         ) : status === "connecting" ? (
-          <button disabled className="px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-lg">
+          <Button disabled variant="secondary">
             Connecting...
-          </button>
+          </Button>
         ) : status === "ended" && completedThisRun ? (
           <>
-            <button
-              onClick={() => router.push(`/dashboard/${campaignId}/contacts`)}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
+            <Button onClick={() => router.push(`/dashboard/${campaignId}/contacts`)} variant="success">
               Continue to Contacts
-            </button>
-            <button
-              onClick={startTest}
-              className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-            >
+            </Button>
+            <Button onClick={startTest} variant="secondary">
               Test Again
-            </button>
+            </Button>
           </>
         ) : (
-          <button
-            onClick={stopTest}
-            disabled={ending}
-            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
+          <Button onClick={stopTest} disabled={ending} variant="danger">
             {ending ? "Ending..." : "End Conversation"}
-          </button>
+          </Button>
         )}
 
         {status === "active" && (
-          <span className="flex items-center gap-2 text-sm text-green-600">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span className="flex items-center gap-2 text-sm text-[var(--color-success-strong)]">
+            <span className="w-2 h-2 bg-[var(--color-success)] rounded-full animate-pulse" />
             Live
           </span>
         )}
@@ -543,43 +532,43 @@ export function VoiceTest({
         <button
           type="button"
           onClick={skipTest}
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-[var(--color-accent)] hover:underline"
         >
           Skip test and continue to contacts
         </button>
       )}
 
       {error && (
-        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+        <Alert variant="danger" className="space-y-1">
           <p className="font-medium">{error.title}</p>
           <p>{error.message}</p>
-          {error.guidance && <p className="text-red-600">{error.guidance}</p>}
+          {error.guidance && <p className="text-[var(--color-danger-strong)]">{error.guidance}</p>}
           {error.details && (
             <details className="mt-2">
-              <summary className="cursor-pointer text-xs text-red-500">Technical details</summary>
-              <pre className="mt-2 text-[11px] bg-white border border-red-100 rounded p-2 overflow-auto text-red-700">
+              <summary className="cursor-pointer text-xs text-[var(--color-danger-strong)]">Technical details</summary>
+              <pre className="mt-2 text-[11px] bg-white border border-[var(--color-danger-border)] rounded p-2 overflow-auto text-[var(--color-danger-strong)]">
                 {error.details}
               </pre>
             </details>
           )}
-        </div>
+        </Alert>
       )}
 
       {messages.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+        <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] divide-y divide-[var(--color-border-subtle)] max-h-[500px] overflow-y-auto">
           {messages.map((m, i) => (
             <div key={i} className="px-4 py-3 flex gap-3">
               <div className="w-24 shrink-0 mt-0.5">
                 <span
                   className={`block text-xs font-medium uppercase ${
-                    m.role === "assistant" ? "text-blue-600" : "text-gray-500"
+                    m.role === "assistant" ? "text-[var(--color-accent)]" : "text-[var(--color-text-secondary)]"
                   }`}
                 >
                   {m.role === "assistant" ? "Interviewer" : "Interviewee"}
                 </span>
-                <span className="block text-[11px] text-gray-400 mt-0.5">{formatTimestamp(m)}</span>
+                <span className="block text-[11px] text-[var(--color-text-muted)] mt-0.5">{formatTimestamp(m)}</span>
               </div>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{m.content}</p>
+              <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">{m.content}</p>
             </div>
           ))}
         </div>
@@ -588,17 +577,14 @@ export function VoiceTest({
       {status === "ended" && messages.length > 0 && (
         <div className="space-y-4">
           {analysisStatus === "idle" && (
-            <button
-              onClick={generateAnalysis}
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-            >
+            <Button onClick={generateAnalysis}>
               Generate Analysis
-            </button>
+            </Button>
           )}
 
           {analysisStatus === "loading" && (
-            <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <svg className="animate-spin h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)] bg-[var(--color-surface-subtle)] rounded-lg p-4 border border-[var(--color-border)]">
+              <svg className="animate-spin h-4 w-4 text-[var(--color-accent)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
@@ -607,11 +593,11 @@ export function VoiceTest({
           )}
 
           {analysisStatus === "error" && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start justify-between gap-3">
+            <div className="text-sm text-[var(--color-danger-strong)] bg-[var(--color-danger-soft)] border border-[var(--color-danger-border)] rounded-lg p-3 flex items-start justify-between gap-3">
               <p>{analysisError ?? "Analysis failed"}</p>
               <button
                 onClick={generateAnalysis}
-                className="text-sm text-red-600 hover:underline whitespace-nowrap"
+                className="text-sm text-[var(--color-danger-strong)] hover:underline whitespace-nowrap"
               >
                 Retry
               </button>
@@ -619,8 +605,8 @@ export function VoiceTest({
           )}
 
           {analysisStatus === "done" && analysis && (
-            <div className="border-t border-gray-200 pt-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <div className="border-t border-[var(--color-border)] pt-4">
+              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
                 Analysis Preview
               </h3>
               <AnalysisDisplay analysis={analysis} />
@@ -629,7 +615,7 @@ export function VoiceTest({
         </div>
       )}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-[var(--color-text-muted)]">
         Uses your desktop microphone. Make sure to allow microphone access when prompted.
       </p>
     </div>

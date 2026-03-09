@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export function PauseResumeButton({
   campaignId,
@@ -45,15 +46,13 @@ export function PauseResumeButton({
   }
 
   return (
-    <button
+    <Button
       onClick={handleClick}
       disabled={loading}
-      className={`px-4 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors ${
-        isPaused ? "bg-blue-600 hover:bg-blue-700" : "bg-yellow-600 hover:bg-yellow-700"
-      }`}
+      variant={isPaused ? "primary" : "warning"}
     >
       {loading ? (isPaused ? "Resuming..." : "Pausing...") : label}
-    </button>
+    </Button>
   );
 }
 

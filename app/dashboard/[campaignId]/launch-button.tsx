@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 export function LaunchButton({ campaignId }: { campaignId: string }) {
   const [launching, setLaunching] = useState(false);
@@ -34,11 +36,11 @@ export function LaunchButton({ campaignId }: { campaignId: string }) {
   if (launched) {
     return (
       <div className="space-y-2">
-        <span className="inline-block px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
+        <span className="inline-block rounded-[var(--radius-md)] bg-[var(--color-success-soft)] px-4 py-2 text-sm font-medium text-[var(--color-success-strong)]">
           Campaign Launched
         </span>
         {scheduled > 0 && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--color-text-muted)]">
             {scheduled} contact{scheduled === 1 ? "" : "s"} scheduled for calling.
           </p>
         )}
@@ -48,17 +50,11 @@ export function LaunchButton({ campaignId }: { campaignId: string }) {
 
   return (
     <div className="space-y-2">
-      <button
-        onClick={handleLaunch}
-        disabled={launching}
-        className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-      >
+      <Button onClick={handleLaunch} disabled={launching} variant="success">
         {launching ? "Launching..." : "Launch Campaign"}
-      </button>
+      </Button>
       {errorMessage && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
-          {errorMessage}
-        </p>
+        <Alert variant="danger" className="text-xs">{errorMessage}</Alert>
       )}
     </div>
   );

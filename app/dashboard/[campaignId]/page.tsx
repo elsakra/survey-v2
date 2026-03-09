@@ -6,6 +6,10 @@ import { LaunchButton } from "./launch-button";
 import { PauseResumeButton } from "./pause-resume-button";
 import { CloneButton } from "./clone-button";
 import { CampaignAnalysis } from "./campaign-analysis";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
+import { Alert } from "@/components/ui/alert";
 
 export default async function CampaignDetailPage({
   params,
@@ -60,57 +64,47 @@ export default async function CampaignDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block">
+      <div>
+        <Link href="/dashboard" className="mb-2 inline-block text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
             &larr; Back to campaigns
           </Link>
-          <h1 className="text-2xl font-semibold">
-            {campaign.title ?? campaign.pillars_json?.title ?? "Untitled Campaign"}
-          </h1>
-          <div className="flex items-center gap-3 mt-2">
+          <SectionHeader
+            title={campaign.title ?? campaign.pillars_json?.title ?? "Untitled Campaign"}
+            actions={(
+              <>
+                {campaign.status === "draft" && (
+                  <Link href={`/dashboard/${campaignId}/edit`}>
+                    <Button variant="secondary">Edit Campaign</Button>
+                  </Link>
+                )}
+                <CloneButton campaignId={campaignId} />
+                <Link href={`/dashboard/${campaignId}/test`}>
+                  <Button variant="secondary">Test Interview</Button>
+                </Link>
+                <Link href={`/dashboard/${campaignId}/contacts`}>
+                  <Button variant="secondary">Manage Contacts</Button>
+                </Link>
+                {(campaign.status === "active" || campaign.status === "paused") && (
+                  <PauseResumeButton campaignId={campaignId} status={campaign.status} />
+                )}
+                {campaign.status === "draft" && contactList.length > 0 && (
+                  <LaunchButton campaignId={campaignId} />
+                )}
+              </>
+            )}
+          />
+          <div className="mt-2 flex items-center gap-3">
             <StatusBadge status={campaign.status ?? "draft"} />
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-[var(--color-text-secondary)]">
               {pillars.length} pillar{pillars.length !== 1 ? "s" : ""} &middot;{" "}
               {contactList.length} contact{contactList.length !== 1 ? "s" : ""} &middot;{" "}
               {completedCount ?? 0} completed
             </span>
           </div>
         </div>
-        <div className="flex gap-2">
-          {campaign.status === "draft" && (
-            <Link
-              href={`/dashboard/${campaignId}/edit`}
-              className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Edit Campaign
-            </Link>
-          )}
-          <CloneButton campaignId={campaignId} />
-          <Link
-            href={`/dashboard/${campaignId}/test`}
-            className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Test Interview
-          </Link>
-          <Link
-            href={`/dashboard/${campaignId}/contacts`}
-            className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Manage Contacts
-          </Link>
-          {(campaign.status === "active" || campaign.status === "paused") && (
-            <PauseResumeButton campaignId={campaignId} status={campaign.status} />
-          )}
-          {campaign.status === "draft" && contactList.length > 0 && (
-            <LaunchButton campaignId={campaignId} />
-          )}
-        </div>
-      </div>
 
       {isDraft && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+        <Alert variant="info" className="p-5">
           <h2 className="text-sm font-semibold text-blue-900 uppercase tracking-wider mb-2">
             What To Do Next
           </h2>
@@ -135,102 +129,94 @@ export default async function CampaignDetailPage({
           </div>
           <div className="flex gap-2">
             {nextLabel === "Step 3: Launch Campaign" ? (
-              <span className="px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
+              <span className="rounded-[var(--radius-md)] bg-[var(--color-success-soft)] px-4 py-2 text-sm font-medium text-[var(--color-success-strong)]">
                 Ready to launch
               </span>
             ) : (
-              <Link
-                href={nextHref}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {nextLabel}
-              </Link>
+              <Link href={nextHref}><Button>{nextLabel}</Button></Link>
             )}
             {hasContacts && (
-              <Link
-                href={`/dashboard/${campaignId}/contacts`}
-                className="px-4 py-2 bg-white border border-blue-300 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                Review Contacts
-              </Link>
+              <Link href={`/dashboard/${campaignId}/contacts`}><Button variant="secondary">Review Contacts</Button></Link>
             )}
           </div>
-        </div>
+        </Alert>
       )}
 
       {/* Research Context */}
       {campaign.pillars_json?.context && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
+        <Card>
+          <CardBody>
+          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
             Research Context
           </h3>
-          <p className="text-sm text-gray-700">{campaign.pillars_json.context}</p>
-        </div>
+          <p className="text-sm text-[var(--color-text-primary)]">{campaign.pillars_json.context}</p>
+          </CardBody>
+        </Card>
       )}
 
-      {/* Pillars */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+      <Card>
+        <CardBody>
+        <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
           Pillar Questions
         </h3>
         <div className="space-y-3">
           {pillars.map((p: any, i: number) => (
             <div key={i} className="flex gap-3">
-              <span className="text-xs font-medium text-gray-400 mt-0.5 w-6">{i + 1}.</span>
-              <p className="text-sm text-gray-700">{p.question}</p>
+              <span className="text-xs font-medium text-[var(--color-text-muted)] mt-0.5 w-6">{i + 1}.</span>
+              <p className="text-sm text-[var(--color-text-primary)]">{p.question}</p>
             </div>
           ))}
         </div>
-      </div>
+        </CardBody>
+      </Card>
 
-      {/* Contacts Summary */}
       {contactList.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex justify-between items-center">
+            <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">
               Contacts
             </h3>
             <Link
               href={`/dashboard/${campaignId}/contacts`}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm font-medium text-[var(--color-accent)] hover:underline"
             >
               View all
             </Link>
-          </div>
+          </CardHeader>
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">Name</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">Phone</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">Status</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">Attempts</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-2">Transcript</th>
+              <tr className="bg-[var(--color-surface-subtle)] border-b border-[var(--color-border-subtle)]">
+                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Name</th>
+                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Phone</th>
+                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Status</th>
+                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Attempts</th>
+                <th className="text-left text-xs font-medium text-[var(--color-text-muted)] px-4 py-2">Transcript</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[var(--color-border-subtle)]">
               {contactList.slice(0, 10).map((c: any) => (
-                <tr key={c.id} className="hover:bg-gray-50">
+                <tr key={c.id} className="hover:bg-[var(--color-surface-subtle)]/45">
                   <td className="px-4 py-2 text-sm">{c.name ?? "—"}</td>
-                  <td className="px-4 py-2 text-sm text-gray-500">{c.phone}</td>
+                  <td className="px-4 py-2 text-sm text-[var(--color-text-secondary)]">{c.phone}</td>
                   <td className="px-4 py-2"><StatusBadge status={c.status} /></td>
-                  <td className="px-4 py-2 text-sm text-gray-500">{c.attempts}/{c.max_attempts}</td>
+                  <td className="px-4 py-2 text-sm text-[var(--color-text-secondary)]">{c.attempts}/{c.max_attempts}</td>
                   <td className="px-4 py-2">
                     {c.session_id ? (
                       <Link
                         href={`/dashboard/${campaignId}/contacts/${c.id}`}
-                        className="text-sm text-blue-600 hover:underline"
+                        className="text-sm font-medium text-[var(--color-accent)] hover:underline"
                       >
                         View
                       </Link>
                     ) : (
-                      <span className="text-sm text-gray-400">—</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">—</span>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       {/* Campaign Analysis */}
