@@ -3,6 +3,26 @@ import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
 
+// Vapi endedReason values that represent actual failures (not normal call endings).
+// Everything not in this set is treated as a successful completion.
+const FAILED_END_REASONS = new Set([
+  "pipeline-error-openai-llm-failed",
+  "pipeline-error-openai-voice-failed",
+  "pipeline-error-cartesia-voice-failed",
+  "pipeline-error-deepinfra-voice-failed",
+  "pipeline-error-eleven-labs-voice-failed",
+  "pipeline-error-playht-voice-failed",
+  "pipeline-error-custom-voice-failed",
+  "pipeline-error-vapi-llm-failed",
+  "pipeline-error-vapi-voice-failed",
+  "pipeline-error-vapi-400-bad-request-validation-failed",
+  "pipeline-error-vapi-500-server-error",
+  "customer-busy",
+  "customer-did-not-answer",
+  "customer-did-not-give-microphone-permission",
+  "voicemail",
+]);
+
 export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
@@ -59,7 +79,21 @@ export async function POST(request: Request) {
       });
     }
 
-    if (isCallEndedEvent(payload, eventType)) {
+    // Handle status-update events (session status only, no transcript/analyze)
+    if (isStatusUpdateEvent(eventType)) {
+      const rawStatus = String(
+        payload.message?.status ?? payload.status ?? payload.call?.status ?? "",
+      ).toLowerCase();
+      if (rawStatus === "ended" || rawStatus === "completed" || rawStatus === "failed") {
+        await supabase
+          .from("sessions")
+          .update({ status: rawStatus === "ended" ? "completed" : rawStatus, ended_at: new Date().toISOString() })
+          .eq("id", sessionId);
+      }
+      return new NextResponse(null, { status: 200 });
+    }
+
+    if (isEndOfCallEvent(payload, eventType)) {
       console.info("[vapi/webhook] end-of-call", {
         eventType,
         sessionId,
@@ -72,7 +106,7 @@ export async function POST(request: Request) {
       });
 
       const endReason = extractEndReason(payload) ?? "completed";
-      const status = endReason === "completed" || endReason === "ended" ? "completed" : "failed";
+      const status = FAILED_END_REASONS.has(endReason) ? "failed" : "completed";
 
       await supabase
         .from("sessions")
@@ -101,19 +135,28 @@ export async function POST(request: Request) {
       }
 
       const vapiMessages = extractVapiMessages(payload);
-      if (vapiMessages.length > 0) {
-        const normalizedMessages = normalizeTranscriptMessages(vapiMessages);
-        const plainText = normalizedMessages
-          .map((m) => `${m.speaker === "interviewer" ? "Interviewer" : "Interviewee"}: ${m.text}`)
-          .join("\n\n");
+      const normalizedMessages = normalizeTranscriptMessages(vapiMessages);
 
+      // Fall back to Vapi's pre-built transcript string if message normalization yields nothing
+      let plainText = normalizedMessages
+        .map((m) => `${m.speaker === "interviewer" ? "Interviewer" : "Interviewee"}: ${m.text}`)
+        .join("\n\n");
+
+      if (!plainText) {
+        const artifactTranscript = extractArtifactTranscript(payload);
+        if (artifactTranscript) plainText = artifactTranscript;
+      }
+
+      if (plainText) {
         const { error: ptErr } = await supabase.from("transcripts").insert({
           session_id: sessionId,
           type: "plain_text",
           content_json: { text: plainText },
         });
         if (ptErr) console.error("[vapi/webhook] plain_text insert error:", ptErr.message);
+      }
 
+      if (normalizedMessages.length > 0) {
         const { error: tErr } = await supabase.from("transcripts").insert({
           session_id: sessionId,
           type: "turns",
@@ -132,7 +175,7 @@ export async function POST(request: Request) {
         if (aErr) console.error("[vapi/webhook] vapi_analysis insert error:", aErr.message);
       }
 
-      if (vapiMessages.length > 0) {
+      if (plainText) {
         const { data: sess } = await supabase
           .from("sessions")
           .select("campaign_id")
@@ -256,16 +299,22 @@ function extractEndReason(payload: Record<string, any>): string | null {
   );
 }
 
-function isCallEndedEvent(payload: Record<string, any>, eventType: string): boolean {
+function isStatusUpdateEvent(eventType: string): boolean {
+  return String(eventType).toLowerCase().includes("status-update");
+}
+
+function isEndOfCallEvent(payload: Record<string, any>, eventType: string): boolean {
   const status = String(
     payload.status ?? payload.message?.status ?? payload.call?.status ?? "",
   ).toLowerCase();
   const type = String(eventType).toLowerCase();
 
+  if (type.includes("status-update")) return false;
+
   return (
     (status === "ended" || status === "completed" || status === "failed" ||
       status === "busy" || status === "no-answer" ||
-      type.includes("end-of-call") || type.includes("call-ended") || type.includes("status-update")) &&
+      type.includes("end-of-call") || type.includes("call-ended")) &&
     status !== "in-progress" && status !== "queued"
   );
 }
@@ -301,7 +350,7 @@ function normalizeTranscriptMessages(
           ? "interviewer"
           : "interviewee";
 
-      const text = String(message.content ?? message.text ?? message.transcript ?? "").trim();
+      const text = String(message.content ?? message.message ?? message.text ?? message.transcript ?? "").trim();
       if (!text) return null;
 
       const secondsFromStart = message.secondsFromStart;
@@ -332,6 +381,15 @@ function normalizeTranscriptMessages(
         endMs: number | null;
       } => Boolean(message),
     );
+}
+
+function extractArtifactTranscript(payload: Record<string, any>): string | null {
+  const t =
+    payload.message?.artifact?.transcript ??
+    payload.artifact?.transcript ??
+    payload.message?.call?.artifact?.transcript ??
+    null;
+  return typeof t === "string" && t.trim() ? t.trim() : null;
 }
 
 function extractAnalysis(payload: Record<string, any>) {
