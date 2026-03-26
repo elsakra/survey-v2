@@ -3,6 +3,21 @@ import { z } from "zod";
 import type { CampaignPillarsJson } from "@/lib/vapi";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
+/** Thrown when the model output fails completeness checks; API maps to 400. */
+export class DraftIncompleteError extends Error {
+  readonly issues: string[];
+
+  constructor(issues: string[]) {
+    const msg =
+      issues.length > 0
+        ? `Draft incomplete: ${issues.join("; ")}`
+        : "Draft incomplete. Try again.";
+    super(msg);
+    this.name = "DraftIncompleteError";
+    this.issues = issues;
+  }
+}
+
 function optString(): z.ZodType<string | undefined> {
   return z
     .union([z.string(), z.null(), z.undefined()])
@@ -58,27 +73,32 @@ export type NormalizedAiDraft = {
   pillars_json: CampaignPillarsJson;
 };
 
-const METHODOLOGY_SYSTEM = `You are an expert qualitative research designer for short phone interviews conducted by an AI voice agent.
+const MIN_RESEARCH_CONTEXT_LEN = 100;
+const MIN_INSTRUCTIONS_LEN = 80;
+const MIN_PILLAR_CONTEXT_LEN = 50;
+const MIN_OPENING_LEN = 60;
 
-The interviewer runtime already enforces: consent flow, at most ONE question per assistant turn, short replies, neutral non-leading wording, no praise like "great answer", and adaptive follow-ups. Your job is to produce pillar content that fits those rules.
+const METHODOLOGY_SYSTEM = `You are an expert qualitative research designer for short PHONE interviews run by an AI voice agent (semi-structured depth style).
 
-Rules for pillar questions:
-- Each pillar has ONE primary open-ended question (one sentence). No compound questions ("and also…"). No stacking two asks in one pillar.
-- Wording must be neutral and non-leading. No assumptions about what the participant did or felt.
-- Optional per-pillar "context" is an internal learning goal for the interviewer (what insight to seek), not text to read aloud.
-- Prefer 3–5 pillars unless the user explicitly wants fewer or you have a strong reason for 2. Never more than 5 pillars.
-- If the user wants a numeric scale (1–5, 1–10), put the exact scale in the pillar question text; the agent will follow scale follow-up rules automatically.
+The runtime enforces: consent flow; at most ONE question per assistant turn; short replies; neutral non-leading wording; no evaluative praise; adaptive follow-ups. Design pillars and copy that fit those constraints.
 
-Opening sentence:
-- If you output opening_sentence, it must be the first thing the interviewer says: brief intro, organization, confidential short research call, optional recording mention, and ask if now is okay — matching a natural consent ask. Do not include pillar content.
+METHODOLOGY (encode in your output):
+- Question types: Default to a single primary ask per pillar that is open, narrative, or behavioral ("walk me through…", "what happened when…", "how does that typically play out…"). Prefer past/concrete over abstract hypotheticals at the start of a topic.
+- Scales: Use a numeric scale (1–5, 1–10, etc.) in the pillar question text ONLY when the user's brief calls for measurement (satisfaction, effort, likelihood, agreement). At most one scale-style pillar; embed the exact scale wording in that pillar question.
+- Ordering (funnel): Order pillars from lower-threat / context-setting → core discovery → more sensitive or evaluative topics last (unless the user requests otherwise).
+- Neutrality: No double-barreled questions. No "Don't you think…", no blame, no assumed facts about the participant. Avoid unexplained jargon; use plain language for the audience.
+- Per-pillar "context": REQUIRED for every pillar. Internal only—not read aloud. Include (1) learning goal, (2) what strong evidence looks like (specific incidents, frequency, triggers, tradeoffs).
+- Research "context" (top-level string): REQUIRED—2–5 sentences: study purpose, audience/population, topic domain, sensitivity level, and that responses are confidential.
+- "instructions": REQUIRED—2–4 short bullet lines as a single string (use newline between bullets). Include: prioritize concrete stories over vague opinions; if time runs short, which pillars to shorten or skip last; do not collect unnecessary PII; any out-of-scope topics.
+- "title": REQUIRED—concise study name.
+- "opening_sentence": REQUIRED—first words the interviewer speaks: brief intro, who you represent (org_name), confidential short research call, recording if applicable, time roughly consistent with max_duration_sec, ask if now is okay. No pillar content.
+- "org_name": REQUIRED—credible neutral label (e.g. "the research team", "our product research group", or the named org from the brief). Never empty.
+- "tone_style": REQUIRED—one short phrase calibrated to the population (e.g. executives: "crisp, neutral, professional, concise"; students: "casual, warm, non-jargony, concise"; sensitive topics: "calm, empathetic, plain-spoken, concise").
+- "max_duration_sec": REQUIRED integer 120–1800. Use ~120 seconds of substantive interview time per pillar as a baseline (e.g. 4 pillars → about 480s), increase slightly for especially deep exploratory briefs, decrease only for explicitly "very quick" asks. Align the minutes you mention in opening_sentence with this budget (the agent rounds to whole minutes).
 
-Tone:
-- tone_style is a short phrase for the agent (e.g. "warm, neutral, professional, concise" or "casual, concise, non-jargony" for students).
+Output strictly JSON with keys: title, context, pillars (array of { question, context } — context required), instructions, max_duration_sec, opening_sentence, interviewer_name (optional), org_name, tone_style.
 
-Duration:
-- max_duration_sec: aim for ~90 seconds of interview time per pillar minimum (e.g. 4 pillars → ~360–480), capped 120–1800, unless the user specifies length.
-
-Output strictly JSON with keys: title, context, pillars (array of { question, context? }), instructions (optional), max_duration_sec (optional), opening_sentence (optional), interviewer_name (optional), org_name (optional), tone_style (optional). Use null or omit for unknown optional strings.`;
+Use null only where a key is truly absent; never omit required keys.`;
 
 function getModel(): string {
   return process.env.LLM_MODEL ?? "gpt-4o-mini";
@@ -98,8 +118,26 @@ function parseLlmJson(raw: string): z.infer<typeof llmOutputSchema> {
   return result.data;
 }
 
+function defaultDurationSecForPillarCount(n: number): number {
+  const baseline = Math.round(Math.max(300, n * 120));
+  return Math.min(1800, Math.max(120, baseline));
+}
+
+function deriveTitleFallback(userPrompt: string | undefined, firstPillarQuestion: string): string {
+  const fromPrompt = (userPrompt ?? "").trim().split(/\n+/)[0]?.trim().slice(0, 72);
+  if (fromPrompt && fromPrompt.length >= 8) {
+    return fromPrompt.replace(/\s+/g, " ");
+  }
+  const fromPillar = firstPillarQuestion.trim().slice(0, 72);
+  if (fromPillar.length >= 8) {
+    return fromPillar.replace(/\s+/g, " ");
+  }
+  return "Research interview";
+}
+
 export function normalizeLlmDraft(
   raw: z.infer<typeof llmOutputSchema>,
+  opts?: { userPrompt?: string },
 ): NormalizedAiDraft {
   const pillars = raw.pillars
     .map((p) => ({
@@ -113,16 +151,25 @@ export function normalizeLlmDraft(
     throw new Error("Draft must include at least one pillar with a non-empty question.");
   }
 
-  let maxDuration = raw.max_duration_sec ?? Math.min(1800, Math.max(120, pillars.length * 90));
-  maxDuration = Math.round(maxDuration);
+  let maxDuration =
+    raw.max_duration_sec != null
+      ? Math.round(raw.max_duration_sec)
+      : defaultDurationSecForPillarCount(pillars.length);
   maxDuration = Math.min(1800, Math.max(120, maxDuration));
 
-  const title = (raw.title ?? "").trim();
-  const context = (raw.context ?? "").trim();
-  const instructions = (raw.instructions ?? "").trim();
-  const openingSentence = (raw.opening_sentence ?? "").trim();
+  let title = (raw.title ?? "").trim();
+  if (!title) {
+    title = deriveTitleFallback(opts?.userPrompt, pillars[0]?.question ?? "");
+  }
+
+  let context = (raw.context ?? "").trim();
+  let instructions = (raw.instructions ?? "").trim();
+  let openingSentence = (raw.opening_sentence ?? "").trim();
   const interviewerName = (raw.interviewer_name ?? "Sarah").trim() || "Sarah";
-  const orgName = (raw.org_name ?? "").trim();
+  let orgName = (raw.org_name ?? "").trim();
+  if (!orgName) {
+    orgName = "the research team";
+  }
   const toneStyle =
     (raw.tone_style ?? "").trim() || "warm, neutral, professional, concise";
 
@@ -160,6 +207,50 @@ export function normalizeLlmDraft(
   };
 }
 
+function validateNormalizedDraft(d: NormalizedAiDraft): void {
+  const issues: string[] = [];
+
+  if (d.context.length < MIN_RESEARCH_CONTEXT_LEN) {
+    issues.push(
+      `research context must be at least ${MIN_RESEARCH_CONTEXT_LEN} characters`,
+    );
+  }
+  if (d.instructions.length < MIN_INSTRUCTIONS_LEN) {
+    issues.push(
+      `instructions must be at least ${MIN_INSTRUCTIONS_LEN} characters (include bullet-style priorities)`,
+    );
+  }
+  if (d.opening_sentence.length < MIN_OPENING_LEN) {
+    issues.push(
+      `opening_sentence must be at least ${MIN_OPENING_LEN} characters`,
+    );
+  }
+  if (!d.org_name.trim()) {
+    issues.push("org_name is required");
+  }
+
+  d.pillars.forEach((p, i) => {
+    if (p.context.length < MIN_PILLAR_CONTEXT_LEN) {
+      issues.push(
+        `pillar ${i + 1} learning goal (context) must be at least ${MIN_PILLAR_CONTEXT_LEN} characters`,
+      );
+    }
+  });
+
+  if (issues.length > 0) {
+    throw new DraftIncompleteError(issues);
+  }
+}
+
+function finalizeDraft(
+  raw: z.infer<typeof llmOutputSchema>,
+  opts?: { userPrompt?: string },
+): NormalizedAiDraft {
+  const draft = normalizeLlmDraft(raw, opts);
+  validateNormalizedDraft(draft);
+  return draft;
+}
+
 async function completeJsonObject(
   client: OpenAI,
   messages: ChatCompletionMessageParam[],
@@ -175,20 +266,60 @@ async function completeJsonObject(
   return raw;
 }
 
+async function runWithOptionalRepair(args: {
+  client: OpenAI;
+  initialMessages: ChatCompletionMessageParam[];
+  repairPreamble: string;
+  userPromptForFallback: string;
+}): Promise<NormalizedAiDraft> {
+  let lastIssues: string[] | undefined;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const messages: ChatCompletionMessageParam[] =
+      attempt === 0
+        ? args.initialMessages
+        : [
+            { role: "system", content: METHODOLOGY_SYSTEM },
+            {
+              role: "user",
+              content:
+                `${args.repairPreamble}\n\nValidation errors from the previous JSON:\n${lastIssues!.map((s) => `- ${s}`).join("\n")}\n\nReturn the COMPLETE corrected JSON with every required field satisfied. Same keys as specified in the system message.\n\n${args.userPromptForFallback}`,
+            },
+          ];
+
+    const raw = await completeJsonObject(args.client, messages);
+    const parsed = parseLlmJson(raw);
+    try {
+      return finalizeDraft(parsed, { userPrompt: args.userPromptForFallback });
+    } catch (e) {
+      if (e instanceof DraftIncompleteError) {
+        lastIssues = e.issues;
+        if (attempt === 1) throw e;
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  throw new Error("Draft generation failed after retry.");
+}
+
 export async function generateDraftFromPrompt(userPrompt: string): Promise<NormalizedAiDraft> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
 
   const client = new OpenAI({ apiKey });
-  const raw = await completeJsonObject(client, [
-    { role: "system", content: METHODOLOGY_SYSTEM },
-    {
-      role: "user",
-      content: `Design an interview from this brief:\n\n${userPrompt.trim()}`,
-    },
-  ]);
-  const parsed = parseLlmJson(raw);
-  return normalizeLlmDraft(parsed);
+  const trimmed = userPrompt.trim();
+
+  return runWithOptionalRepair({
+    client,
+    userPromptForFallback: trimmed,
+    initialMessages: [
+      { role: "system", content: METHODOLOGY_SYSTEM },
+      { role: "user", content: `Design an interview from this brief:\n\n${trimmed}` },
+    ],
+    repairPreamble: "Your previous answer failed validation.",
+  });
 }
 
 export async function reviseDraft(
@@ -199,6 +330,8 @@ export async function reviseDraft(
   if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
 
   const client = new OpenAI({ apiKey });
+  const trimmed = userPrompt.trim();
+
   const snapshot: Record<string, unknown> = {
     title: current.title,
     context: current.context,
@@ -214,15 +347,14 @@ export async function reviseDraft(
     })),
   };
 
-  const raw = await completeJsonObject(client, [
-    { role: "system", content: METHODOLOGY_SYSTEM },
-    {
-      role: "user",
-      content:
-        `Here is the current interview draft as JSON:\n${JSON.stringify(snapshot, null, 2)}\n\n` +
-        `Apply the following changes and return the FULL updated draft as JSON (same keys as when creating from scratch). Preserve parts that the user did not ask to change.\n\n${userPrompt.trim()}`,
-    },
-  ]);
-  const parsed = parseLlmJson(raw);
-  return normalizeLlmDraft(parsed);
+  const reviseBlock =
+    `Here is the current interview draft as JSON:\n${JSON.stringify(snapshot, null, 2)}\n\n` +
+    `Apply the following changes and return the FULL updated draft as JSON (same keys as when creating from scratch). Preserve parts that the user did not ask to change.\n\n${trimmed}`;
+
+  return runWithOptionalRepair({
+    client,
+    userPromptForFallback: reviseBlock,
+    initialMessages: [{ role: "system", content: METHODOLOGY_SYSTEM }, { role: "user", content: reviseBlock }],
+    repairPreamble: "Your previous revised JSON failed validation.",
+  });
 }

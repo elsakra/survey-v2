@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
 import {
+  DraftIncompleteError,
   generateDraftFromPrompt,
   reviseDraft,
   type AiDraftCurrentInput,
@@ -117,6 +118,12 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "AI draft failed";
     console.error("[ai-draft]", err);
+    if (err instanceof DraftIncompleteError) {
+      return NextResponse.json(
+        { error: message, issues: err.issues },
+        { status: 400 },
+      );
+    }
     if (message === "Missing OPENAI_API_KEY") {
       return NextResponse.json(
         { error: "AI draft generation requires OPENAI_API_KEY to be configured." },
