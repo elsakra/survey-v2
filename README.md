@@ -2,6 +2,8 @@
 
 Vapi-first conversational phone interview pipeline.
 
+For a full engineering and operations handoff for future coding agents, see `AGENTS.md`.
+
 - Outbound call is created by Vapi directly.
 - Voice defaults to ElevenLabs for realism.
 - No DTMF/keypad flow (speech-only conversation).

@@ -11,6 +11,18 @@ interface PillarField {
   context: string;
 }
 
+type AiDraftPayload = {
+  title?: string;
+  context?: string;
+  instructions?: string;
+  max_duration_sec: number;
+  opening_sentence?: string;
+  interviewer_name?: string;
+  org_name?: string;
+  tone_style?: string;
+  pillars: Array<{ id: string; question: string; context: string }>;
+};
+
 const TIMEZONES = [
   "America/New_York",
   "America/Chicago",
@@ -43,6 +55,9 @@ export default function EditCampaignPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDraft, setIsDraft] = useState(true);
+  const [nlRefinePrompt, setNlRefinePrompt] = useState("");
+  const [nlBusy, setNlBusy] = useState(false);
+  const [nlError, setNlError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [context, setContext] = useState("");
@@ -147,6 +162,76 @@ export default function EditCampaignPage() {
     setDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
 
+  function mergeAiDraft(d: AiDraftPayload) {
+    setTitle(d.title ?? "");
+    setContext(d.context ?? "");
+    setInstructions(d.instructions ?? "");
+    setMaxDurationSec(d.max_duration_sec);
+    setOpeningSentence(d.opening_sentence ?? "");
+    setInterviewerName(d.interviewer_name?.trim() ? d.interviewer_name : "Sarah");
+    setOrgName(d.org_name ?? "");
+    setToneStyle(
+      d.tone_style?.trim()
+        ? d.tone_style
+        : "warm, neutral, professional, concise",
+    );
+    if (d.pillars.length > 0) {
+      setPillars(
+        d.pillars.map((p, i) => ({
+          id: p.id || `p${i + 1}`,
+          question: p.question,
+          context: p.context ?? "",
+        })),
+      );
+    }
+  }
+
+  async function handleRefineWithAi() {
+    setNlError(null);
+    const prompt = nlRefinePrompt.trim();
+    if (prompt.length < 4) {
+      setNlError("Say what you want to change (a few words or more).");
+      return;
+    }
+    setNlBusy(true);
+    try {
+      const res = await fetch("/api/campaigns/ai-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "revise",
+          prompt,
+          current: {
+            title,
+            context,
+            instructions,
+            max_duration_sec: maxDurationSec,
+            opening_sentence: openingSentence,
+            interviewer_name: interviewerName,
+            org_name: orgName,
+            tone_style: toneStyle,
+            pillars: pillars.map((p) => ({
+              question: p.question,
+              context: p.context,
+            })),
+          },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNlError(typeof data.error === "string" ? data.error : "Could not update draft.");
+        return;
+      }
+      if (data.draft) {
+        mergeAiDraft(data.draft as AiDraftPayload);
+      }
+    } catch {
+      setNlError("Network error. Try again.");
+    } finally {
+      setNlBusy(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -245,6 +330,32 @@ export default function EditCampaignPage() {
         &larr; Back to campaign
       </Link>
       <h1 className="text-2xl font-semibold mb-6">Edit Campaign</h1>
+
+      <section className="bg-gradient-to-b from-blue-50/80 to-white rounded-xl border border-blue-100 p-6 space-y-4 mb-8">
+        <h2 className="text-lg font-medium text-[var(--color-text-primary,#111)]">Refine with AI</h2>
+        <p className="text-sm text-gray-600">
+          Describe changes in plain language. The form below will update so you can review before saving.
+        </p>
+        <textarea
+          value={nlRefinePrompt}
+          onChange={(e) => setNlRefinePrompt(e.target.value)}
+          rows={4}
+          disabled={nlBusy || saving}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+          placeholder="Example: Add a pillar about competitors. Shorten the opener. Make tone more casual for college students."
+        />
+        {nlError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{nlError}</p>
+        )}
+        <button
+          type="button"
+          onClick={handleRefineWithAi}
+          disabled={nlBusy || saving}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {nlBusy ? "Updating…" : "Apply changes"}
+        </button>
+      </section>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">

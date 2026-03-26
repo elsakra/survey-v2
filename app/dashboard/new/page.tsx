@@ -33,10 +33,25 @@ const DAYS = [
   { value: 0, label: "Sun" },
 ];
 
+type AiDraftPayload = {
+  title?: string;
+  context?: string;
+  instructions?: string;
+  max_duration_sec: number;
+  opening_sentence?: string;
+  interviewer_name?: string;
+  org_name?: string;
+  tone_style?: string;
+  pillars: Array<{ id: string; question: string; context: string }>;
+};
+
 export default function NewCampaignPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nlPrompt, setNlPrompt] = useState("");
+  const [nlBusy, setNlBusy] = useState(false);
+  const [nlError, setNlError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [context, setContext] = useState("");
@@ -77,6 +92,59 @@ export default function NewCampaignPage() {
     setDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
+  }
+
+  function mergeAiDraft(d: AiDraftPayload) {
+    setTitle(d.title ?? "");
+    setContext(d.context ?? "");
+    setInstructions(d.instructions ?? "");
+    setMaxDurationSec(d.max_duration_sec);
+    setOpeningSentence(d.opening_sentence ?? "");
+    setInterviewerName(d.interviewer_name?.trim() ? d.interviewer_name : "Sarah");
+    setOrgName(d.org_name ?? "");
+    setToneStyle(
+      d.tone_style?.trim()
+        ? d.tone_style
+        : "warm, neutral, professional, concise",
+    );
+    if (d.pillars.length > 0) {
+      setPillars(
+        d.pillars.map((p, i) => ({
+          id: p.id || `p${i + 1}`,
+          question: p.question,
+          context: p.context ?? "",
+        })),
+      );
+    }
+  }
+
+  async function handleGenerateFromNl() {
+    setNlError(null);
+    const prompt = nlPrompt.trim();
+    if (prompt.length < 4) {
+      setNlError("Add a few words about what you want to learn.");
+      return;
+    }
+    setNlBusy(true);
+    try {
+      const res = await fetch("/api/campaigns/ai-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "create", prompt }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNlError(typeof data.error === "string" ? data.error : "Could not generate draft.");
+        return;
+      }
+      if (data.draft) {
+        mergeAiDraft(data.draft as AiDraftPayload);
+      }
+    } catch {
+      setNlError("Network error. Try again.");
+    } finally {
+      setNlBusy(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,6 +213,34 @@ export default function NewCampaignPage() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold mb-6">Create Campaign</h1>
+
+      <section className="bg-gradient-to-b from-blue-50/80 to-white rounded-xl border border-blue-100 p-6 space-y-4 mb-8">
+        <h2 className="text-lg font-medium text-[var(--color-text-primary,#111)]">
+          Describe your interview
+        </h2>
+        <p className="text-sm text-gray-600">
+          Use natural language: goals, audience, topics, and length. We will draft pillar questions and settings you can edit before saving.
+        </p>
+        <textarea
+          value={nlPrompt}
+          onChange={(e) => setNlPrompt(e.target.value)}
+          rows={5}
+          disabled={nlBusy || saving}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+          placeholder="Example: 5-minute calls with SMB owners who tried our billing product in Q1. We want to understand switching costs, what almost made them churn, and how they compare us to QuickBooks."
+        />
+        {nlError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{nlError}</p>
+        )}
+        <button
+          type="button"
+          onClick={handleGenerateFromNl}
+          disabled={nlBusy || saving}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {nlBusy ? "Generating…" : "Generate draft"}
+        </button>
+      </section>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info */}

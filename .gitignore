@@ -10,3 +10,7 @@ recordings/
 __pycache__/
 next-env.d.ts
 .vercel/
+.vercel
+.env*.local
+*.tsbuildinfo
+supabase/.temp/

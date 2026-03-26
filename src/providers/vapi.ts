@@ -4,8 +4,8 @@ import path from "path";
 
 const VAPI_API_BASE = "https://api.vapi.ai";
 
-const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "openai";
-const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "gpt-4o-mini";
+const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "groq";
+const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "openai/gpt-oss-120b";
 const DEFAULT_MODEL_TEMPERATURE = Number(process.env.VAPI_MODEL_TEMPERATURE ?? "0.35");
 const DEFAULT_VOICE_SPEED = Number(process.env.VAPI_VOICE_SPEED ?? "0.98");
 const DEFAULT_VOICE_STABILITY = Number(process.env.VAPI_VOICE_STABILITY ?? "0.5");
