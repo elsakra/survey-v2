@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { VoicewellLogo } from "@/components/voicewell-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "./input";
 import { Button } from "./button";
 import { cn } from "@/lib/ui";
 
 const primaryNav = [
-  { href: "/dashboard", label: "Campaigns", glyph: "CA" },
-  { href: "/dashboard/new", label: "New", glyph: "NW" },
+  { href: "/dashboard", label: "Campaigns", glyph: "📋" },
+  { href: "/dashboard/new", label: "New", glyph: "➕" },
 ];
 
 const utilityNav = [
@@ -46,10 +47,10 @@ export function AppShell({
                   key={item.href + item.label}
                   href={item.href}
                   className={cn(
-                    "group relative inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-[10px] font-semibold tracking-wide transition-colors",
+                    "group relative inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-lg leading-none transition-colors",
                     active
-                      ? "bg-[var(--color-accent-soft)] text-[var(--color-label)]"
-                      : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] hover:text-[var(--color-text-primary)]",
+                      ? "bg-[var(--color-accent-soft)]"
+                      : "opacity-90 hover:bg-[var(--color-surface-elevated)] hover:opacity-100",
                   )}
                   title={item.label}
                 >
@@ -96,7 +97,8 @@ export function AppShell({
                   className="h-9 border-[var(--color-border-subtle)] bg-[var(--color-surface-elevated)]"
                 />
               </div>
-              <div className="ml-auto flex shrink-0 items-center gap-3">
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <ThemeToggle />
                 <span className="hidden text-sm text-[var(--color-text-secondary)] md:inline">{email}</span>
                 <form action="/auth/signout" method="POST">
                   <Button type="submit" variant="ghost" size="sm">
