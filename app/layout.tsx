@@ -15,8 +15,18 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Voicewell — Voice research platform",
-  description: "Create and manage AI-conducted voice interviews",
+  ...(process.env.NEXT_PUBLIC_APP_URL
+    ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) }
+    : {}),
+  title: {
+    default: "Voicewell",
+    template: "%s · Voicewell",
+  },
+  description: "Voicewell app — manage AI voice interviews, campaigns, and transcripts.",
+  icons: {
+    icon: "/voicewell-logo.png",
+    apple: "/voicewell-logo.png",
+  },
 };
 
 export default function RootLayout({

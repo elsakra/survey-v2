@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { VoicewellLogo } from "@/components/voicewell-logo";
 import { Input } from "./input";
 import { Button } from "./button";
 import { cn } from "@/lib/ui";
@@ -28,13 +29,13 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[4.25rem] shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)] lg:flex lg:flex-col lg:items-center lg:py-4">
+        <aside className="hidden w-[7rem] shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)] py-4 lg:flex">
           <Link
             href="/dashboard"
-            className="mb-8 font-display text-lg font-medium leading-none tracking-tight text-[var(--color-text-primary)]"
-            title="Voicewell home"
+            className="mb-8 inline-flex outline-none ring-offset-2 ring-offset-[var(--color-bg)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            title="Voicewell — Campaigns"
           >
-            vw
+            <VoicewellLogo height={20} className="opacity-95" />
           </Link>
           <nav className="flex flex-1 flex-col items-center gap-2">
             {primaryNav.map((item) => {
@@ -77,16 +78,25 @@ export function AppShell({
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface)]/85 backdrop-blur-md">
             <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-3 px-4 sm:px-6">
-              <p className="hidden text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-label)] sm:block">
-                Voice insight platform
-              </p>
-              <div className="w-full max-w-md sm:ml-4">
+              <div className="flex shrink-0 items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center outline-none ring-offset-2 ring-offset-[var(--color-bg)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                  title="Voicewell — Dashboard"
+                >
+                  <VoicewellLogo height={26} className="opacity-95" priority />
+                </Link>
+                <span className="hidden text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-label)] xl:inline">
+                  Voice insight platform
+                </span>
+              </div>
+              <div className="min-w-0 flex-1 sm:ml-2">
                 <Input
                   placeholder="Search campaigns, contacts, transcripts..."
                   className="h-9 border-[var(--color-border-subtle)] bg-[var(--color-surface-elevated)]"
                 />
               </div>
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex shrink-0 items-center gap-3">
                 <span className="hidden text-sm text-[var(--color-text-secondary)] md:inline">{email}</span>
                 <form action="/auth/signout" method="POST">
                   <Button type="submit" variant="ghost" size="sm">

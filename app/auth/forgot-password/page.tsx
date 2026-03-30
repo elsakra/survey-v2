@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import { AuthBrandHeader } from "@/components/auth-brand-header";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -37,9 +38,7 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm border-[var(--color-border)] shadow-[var(--shadow-card)]">
         <CardBody className="p-8">
-          <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-label)]">
-            Voice insight platform
-          </p>
+          <AuthBrandHeader />
           <h1 className="font-display text-center text-2xl font-medium tracking-tight text-[var(--color-text-primary)]">
             Reset password
           </h1>

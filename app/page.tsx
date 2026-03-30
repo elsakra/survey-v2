@@ -1,3 +1,7 @@
+/**
+ * App entry only (no marketing site in this repo). `/` sends users to the dashboard
+ * or sign-in; the public landing page lives in a separate deployment.
+ */
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 
