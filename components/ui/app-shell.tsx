@@ -10,13 +10,27 @@ import { cn } from "@/lib/ui";
 
 const primaryNav = [
   { href: "/dashboard", label: "Campaigns", glyph: "📋" },
-  { href: "/dashboard/new", label: "New", glyph: "➕" },
+  { href: "/dashboard/new", label: "New campaign", glyph: "➕" },
 ];
 
 const utilityNav = [
-  { href: "/dashboard", label: "Activity", glyph: "AC" },
-  { href: "/dashboard", label: "Help", glyph: "HP" },
+  { href: "/dashboard/activity", label: "Activity", glyph: "📞" },
+  { href: "/dashboard/help", label: "Help", glyph: "❓" },
 ];
+
+function primaryNavActive(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    if (pathname === "/dashboard") return true;
+    if (!pathname.startsWith("/dashboard/")) return false;
+    const segment = pathname.split("/")[2] ?? "";
+    return !["new", "activity", "help"].includes(segment);
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function utilityNavActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AppShell({
   email,
@@ -33,8 +47,7 @@ export function AppShell({
         <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)] py-3 lg:flex">
           <nav className="flex flex-1 flex-col items-center gap-2 pt-1">
             {primaryNav.map((item) => {
-              const active =
-                pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              const active = primaryNavActive(pathname, item.href);
               return (
                 <Link
                   key={item.href + item.label}
@@ -56,16 +69,27 @@ export function AppShell({
             })}
           </nav>
           <div className="flex flex-col items-center gap-2">
-            {utilityNav.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] hover:text-[var(--color-text-secondary)]"
-                title={item.label}
-              >
-                {item.glyph}
-              </Link>
-            ))}
+            {utilityNav.map((item) => {
+              const active = utilityNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "group relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-base leading-none transition-colors",
+                    active
+                      ? "bg-[var(--color-accent-soft)]"
+                      : "opacity-90 hover:bg-[var(--color-surface-elevated)] hover:opacity-100",
+                  )}
+                  title={item.label}
+                >
+                  {item.glyph}
+                  <span className="pointer-events-none absolute left-12 z-30 hidden whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-primary)] shadow-[var(--shadow-soft)] group-hover:block">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </aside>
 
@@ -80,9 +104,6 @@ export function AppShell({
                 >
                   <VoicewellLogo height={26} className="opacity-95" priority />
                 </Link>
-                <span className="hidden text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-label)] xl:inline">
-                  Voice insight platform
-                </span>
               </div>
               <div className="min-w-0 flex-1 sm:ml-2">
                 <Input
