@@ -23,7 +23,7 @@ export function Toast({
   return (
     <div
       className={cn(
-        "fixed bottom-5 right-5 z-50 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-[var(--shadow-card)]",
+        "fixed bottom-5 right-5 z-50 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-[var(--shadow-card)]",
       )}
     >
       {message}

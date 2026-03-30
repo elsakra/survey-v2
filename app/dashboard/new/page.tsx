@@ -212,13 +212,15 @@ export default function NewCampaignPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-6">Create Campaign</h1>
+      <h1 className="font-display mb-8 text-3xl font-medium tracking-tight text-[var(--color-text-primary)]">
+        Create Campaign
+      </h1>
 
-      <section className="bg-gradient-to-b from-blue-50/80 to-white rounded-xl border border-blue-100 p-6 space-y-4 mb-8">
-        <h2 className="text-lg font-medium text-[var(--color-text-primary,#111)]">
+      <section className="mb-8 space-y-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-6">
+        <h2 className="text-lg font-medium text-[var(--color-text-primary)]">
           Describe your interview
         </h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[var(--color-text-secondary)]">
           Use natural language: goals, audience, topics, and length. We will draft pillar questions and settings you can edit before saving.
         </p>
         <textarea
@@ -226,17 +228,19 @@ export default function NewCampaignPage() {
           onChange={(e) => setNlPrompt(e.target.value)}
           rows={5}
           disabled={nlBusy || saving}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)] disabled:opacity-60"
           placeholder="Example: 5-minute calls with SMB owners who tried our billing product in Q1. We want to understand switching costs, what almost made them churn, and how they compare us to QuickBooks."
         />
         {nlError && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{nlError}</p>
+          <p className="rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-soft)] p-3 text-sm text-[var(--color-danger-strong)]">
+            {nlError}
+          </p>
         )}
         <button
           type="button"
           onClick={handleGenerateFromNl}
           disabled={nlBusy || saving}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="rounded-lg bg-[var(--color-cta)] px-4 py-2 text-sm font-medium text-[var(--color-cta-text)] transition-colors hover:bg-[var(--color-cta-hover)] disabled:opacity-50"
         >
           {nlBusy ? "Generating…" : "Generate draft"}
         </button>
@@ -244,55 +248,55 @@ export default function NewCampaignPage() {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h2 className="text-lg font-medium">Basic Info</h2>
+        <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-6 space-y-4">
+          <h2 className="font-display text-lg font-medium">Basic Info</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               Campaign Title
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               placeholder="e.g. PE Due Diligence — Acme Corp"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               Research Context
             </label>
             <textarea
               value={context}
               onChange={(e) => setContext(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               placeholder="Describe the purpose of this research. E.g. 'Private equity due diligence interview with current employees to understand operating health and leadership quality.'"
             />
           </div>
         </section>
 
         {/* Pillars */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-6 space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-medium">Pillar Questions</h2>
-            <span className="text-sm text-gray-500">{pillars.length}/5</span>
+            <h2 className="font-display text-lg font-medium">Pillar Questions</h2>
+            <span className="text-sm text-[var(--color-text-muted)]">{pillars.length}/5</span>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[var(--color-text-muted)]">
             These are the core topics you want to cover in each interview.
           </p>
 
           {pillars.map((p, idx) => (
-            <div key={idx} className="border border-gray-200 rounded-lg p-4 space-y-3">
+            <div key={idx} className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
               <div className="flex justify-between items-start">
-                <span className="text-xs font-medium text-gray-500 uppercase">
+                <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-label)]">
                   Pillar {idx + 1}
                 </span>
                 {pillars.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removePillar(idx)}
-                    className="text-xs text-red-500 hover:underline"
+                    className="text-xs text-[var(--color-danger)] hover:underline"
                   >
                     Remove
                   </button>
@@ -302,14 +306,14 @@ export default function NewCampaignPage() {
                 type="text"
                 value={p.question}
                 onChange={(e) => updatePillar(idx, "question", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
                 placeholder="e.g. What does a typical week look like for you and your team?"
               />
               <textarea
                 value={p.context}
                 onChange={(e) => updatePillar(idx, "context", e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
                 placeholder="Optional: what are you trying to learn from this question?"
               />
             </div>
@@ -319,7 +323,7 @@ export default function NewCampaignPage() {
             <button
               type="button"
               onClick={addPillar}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-[var(--color-label)] hover:underline"
             >
               + Add pillar
             </button>
@@ -327,59 +331,59 @@ export default function NewCampaignPage() {
         </section>
 
         {/* Interview Settings */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-6 space-y-4">
           <h2 className="text-lg font-medium">Interview Settings</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Interviewer Name
               </label>
               <input
                 type="text"
                 value={interviewerName}
                 onChange={(e) => setInterviewerName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Organization Name
               </label>
               <input
                 type="text"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
                 placeholder="e.g. a management consulting firm"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               Tone
             </label>
             <input
               type="text"
               value={toneStyle}
               onChange={(e) => setToneStyle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               General Instructions
             </label>
             <textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               placeholder="Optional: any special instructions for the AI interviewer across all pillars"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Max Interview Duration (seconds)
               </label>
               <input
@@ -388,18 +392,18 @@ export default function NewCampaignPage() {
                 max={1800}
                 value={maxDurationSec}
                 onChange={(e) => setMaxDurationSec(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Opening Sentence (Verbatim, Optional)
               </label>
               <input
                 type="text"
                 value={openingSentence}
                 onChange={(e) => setOpeningSentence(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
                 placeholder="If set, AI always uses this exact opener"
               />
             </div>
@@ -407,17 +411,17 @@ export default function NewCampaignPage() {
         </section>
 
         {/* Calling Hours */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-6 space-y-4">
           <h2 className="text-lg font-medium">Calling Hours</h2>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Timezone
               </label>
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               >
                 {TIMEZONES.map((tz) => (
                   <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
@@ -425,30 +429,30 @@ export default function NewCampaignPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Start
               </label>
               <input
                 type="time"
                 value={startHour}
                 onChange={(e) => setStartHour(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 End
               </label>
               <input
                 type="time"
                 value={endHour}
                 onChange={(e) => setEndHour(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-1 focus:ring-offset-[var(--color-bg)]"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               Days
             </label>
             <div className="flex gap-2">
@@ -459,8 +463,8 @@ export default function NewCampaignPage() {
                   onClick={() => toggleDay(d.value)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     days.includes(d.value)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                      ? "border-[var(--color-cta)] bg-[var(--color-cta)] text-[var(--color-cta-text)]"
+                      : "border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] hover:border-[var(--color-label)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >
                   {d.label}
@@ -471,7 +475,7 @@ export default function NewCampaignPage() {
         </section>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+          <p className="rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-soft)] p-3 text-sm text-[var(--color-danger-strong)]">
             {error}
           </p>
         )}
@@ -479,7 +483,7 @@ export default function NewCampaignPage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="w-full rounded-lg bg-[var(--color-cta)] py-3 font-medium text-[var(--color-cta-text)] transition-colors hover:bg-[var(--color-cta-hover)] disabled:opacity-50"
         >
           {saving ? "Creating..." : "Create Campaign"}
         </button>

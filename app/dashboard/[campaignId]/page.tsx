@@ -107,7 +107,7 @@ export default async function CampaignDetailPage({
       <div className="grid gap-3 sm:grid-cols-4">
         <Card>
           <CardBody className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Pillars</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Pillars</p>
             <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{pillars.length}</p>
           </CardBody>
         </Card>
@@ -119,13 +119,13 @@ export default async function CampaignDetailPage({
         </Card>
         <Card>
           <CardBody className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Completed</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Completed</p>
             <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{completedCount ?? 0}</p>
           </CardBody>
         </Card>
         <Card>
           <CardBody className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Readiness</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Readiness</p>
             <p className="text-base font-semibold text-[var(--color-text-primary)]">
               {!hasTested ? "Needs test call" : !hasContacts ? "Needs contacts" : "Ready to launch"}
             </p>
@@ -135,26 +135,22 @@ export default async function CampaignDetailPage({
 
       {isDraft && (
         <Alert variant="info" className="p-5">
-          <h2 className="text-sm font-semibold text-blue-900 uppercase tracking-wider mb-2">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
             What To Do Next
           </h2>
-          <p className="text-sm text-blue-800 mb-4">{nextHint}</p>
-          <div className="grid sm:grid-cols-3 gap-3 mb-4">
-            <div className="bg-white border border-blue-100 rounded-lg p-3">
-              <p className="text-xs font-medium text-blue-700">Step 1</p>
-              <p className="text-sm text-gray-700 mt-1">
-                Test interview in browser (or skip)
-              </p>
+          <p className="mb-4 text-sm text-[var(--color-text-secondary)]">{nextHint}</p>
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-3">
+              <p className="text-xs font-medium text-[var(--color-label)]">Step 1</p>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Test interview in browser (or skip)</p>
             </div>
-            <div className="bg-white border border-blue-100 rounded-lg p-3">
-              <p className="text-xs font-medium text-blue-700">Step 2</p>
-              <p className="text-sm text-gray-700 mt-1">
-                Add or review contacts
-              </p>
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-3">
+              <p className="text-xs font-medium text-[var(--color-label)]">Step 2</p>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Add or review contacts</p>
             </div>
-            <div className="bg-white border border-blue-100 rounded-lg p-3">
-              <p className="text-xs font-medium text-blue-700">Step 3</p>
-              <p className="text-sm text-gray-700 mt-1">Launch campaign calls</p>
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-3">
+              <p className="text-xs font-medium text-[var(--color-label)]">Step 3</p>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Launch campaign calls</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -175,7 +171,7 @@ export default async function CampaignDetailPage({
       {campaign.pillars_json?.context && (
         <Card>
           <CardBody>
-            <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+            <h3 className="mb-2 text-sm font-medium uppercase tracking-[0.18em] text-[var(--color-label)]">
               Research Context
             </h3>
             <p className="text-sm text-[var(--color-text-primary)]">{campaign.pillars_json.context}</p>
@@ -185,7 +181,7 @@ export default async function CampaignDetailPage({
 
       <Card>
         <CardBody>
-          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+          <h3 className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-[var(--color-label)]">
             Pillar Questions
           </h3>
           <div className="space-y-2">

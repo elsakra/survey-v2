@@ -42,11 +42,16 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface)] px-4">
-      <Card className="w-full max-w-sm">
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <Card className="w-full max-w-sm border-[var(--color-border)] shadow-[var(--shadow-card)]">
         <CardBody className="p-8">
-          <h1 className="text-2xl font-semibold text-center mb-1">Set new password</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] text-center mb-6">
+          <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-label)]">
+            Voice insight platform
+          </p>
+          <h1 className="font-display text-center text-2xl font-medium tracking-tight text-[var(--color-text-primary)]">
+            Set new password
+          </h1>
+          <p className="mb-6 mt-2 text-center text-sm text-[var(--color-text-secondary)]">
             Choose a new password for your account.
           </p>
 

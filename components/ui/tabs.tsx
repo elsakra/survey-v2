@@ -22,7 +22,7 @@ export function Tabs({
             className={cn(
               "rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-sm font-medium transition-colors",
               active
-                ? "bg-white text-[var(--color-text-primary)] shadow-sm"
+                ? "bg-[var(--color-surface-elevated)] text-[var(--color-text-primary)] shadow-[var(--shadow-card)]"
                 : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]",
             )}
           >

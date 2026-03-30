@@ -41,15 +41,15 @@ export default async function TestPage({
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <Alert variant="info">
-          <h2 className="text-sm font-semibold text-blue-900 uppercase tracking-wider mb-3">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
             Before You Start
           </h2>
-          <ol className="list-decimal list-inside text-sm text-blue-900 space-y-1">
+          <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--color-text-primary)]">
             <li>Use Chrome or Edge on desktop.</li>
             <li>Allow microphone access when prompted.</li>
             <li>Make sure your mic is not muted and volume is up.</li>
           </ol>
-          <div className="mt-4 text-sm text-blue-800 space-y-1">
+          <div className="mt-4 space-y-1 text-sm text-[var(--color-text-secondary)]">
             <p>
               <span className="font-medium">Success looks like:</span> the status shows
               <span className="font-semibold"> Live</span> and you see transcript turns below.
@@ -63,7 +63,7 @@ export default async function TestPage({
 
         <Card>
           <CardBody>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+            <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
               Current Configuration
             </h3>
             <ul className="space-y-1 text-sm text-[var(--color-text-secondary)]">

@@ -130,13 +130,13 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
+      <div className="flex gap-2 border-b border-[var(--color-border)] pb-2">
         {(["transcript", "analysis", "raw"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`text-sm font-medium px-3 py-1.5 rounded-lg capitalize ${
-              tab === t ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              tab === t ? "bg-[var(--color-accent-soft)] text-[var(--color-label)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             }`}
           >
             {t}
@@ -145,10 +145,10 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
       </div>
 
       <div className="flex gap-2">
-        <button onClick={downloadTranscript} className="text-sm text-[var(--color-accent)] hover:underline">
+        <button onClick={downloadTranscript} className="text-sm text-[var(--color-label)] hover:underline">
           Download .txt
         </button>
-        <button onClick={downloadJSON} className="text-sm text-[var(--color-accent)] hover:underline">
+        <button onClick={downloadJSON} className="text-sm text-[var(--color-label)] hover:underline">
           Download .json
         </button>
       </div>
@@ -161,7 +161,7 @@ export function TranscriptViewer({ transcripts, sessionId, dbTurns = [] }: Trans
                 <div className="w-28 shrink-0 mt-0.5">
                   <span
                     className={`block text-xs font-medium uppercase ${
-                      turn.speaker === "interviewer" ? "text-[var(--color-accent)]" : "text-[var(--color-text-secondary)]"
+                      turn.speaker === "interviewer" ? "text-[var(--color-label)]" : "text-[var(--color-text-secondary)]"
                     }`}
                   >
                     {turn.speaker === "interviewer" ? "Interviewer" : "Interviewee"}

@@ -551,7 +551,7 @@ export function VoiceTest({
           {error.details && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-[var(--color-danger-strong)]">Technical details</summary>
-              <pre className="mt-2 text-[11px] bg-white border border-[var(--color-danger-border)] rounded p-2 overflow-auto text-[var(--color-danger-strong)]">
+              <pre className="mt-2 overflow-auto rounded border border-[var(--color-danger-border)] bg-[var(--color-surface-subtle)] p-2 text-[11px] text-[var(--color-danger-strong)]">
                 {error.details}
               </pre>
             </details>

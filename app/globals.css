@@ -1,32 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  --color-accent: #2659d9;
-  --color-accent-soft: #eef2ff;
-  --color-surface: #f6f8fc;
-  --color-surface-elevated: #ffffff;
-  --color-surface-subtle: #f2f4f8;
-  --color-border: #dde3ee;
-  --color-border-subtle: #edf1f7;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #64748b;
-  --color-focus-ring: #7da2ff;
-  --color-success: #1f9d5b;
-  --color-success-soft: #e9f9ef;
-  --color-success-strong: #166d40;
-  --color-success-border: #bde8cd;
-  --color-warning: #ca8a04;
-  --color-warning-soft: #fef9e8;
-  --color-warning-strong: #8c6200;
-  --color-warning-border: #f5e2a8;
-  --color-danger: #d94848;
-  --color-danger-soft: #fef0f0;
-  --color-danger-strong: #a93535;
-  --color-danger-border: #f7c8c8;
-  --color-info-soft: #ebf2ff;
-  --color-info-strong: #294cad;
-  --color-info-border: #c9d9ff;
+  /* Voicewell-aligned dark UI (matches voicewell-ui.vercel.app) */
+  --color-bg: #050505;
+  --color-accent: #9eb9d0;
+  --color-accent-soft: rgba(158, 185, 208, 0.14);
+  --color-label: #8cb4d4;
+  --color-surface: #080808;
+  --color-surface-elevated: #121212;
+  --color-surface-subtle: #0e0e0e;
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-text-primary: #f5f5f4;
+  --color-text-secondary: #a8a29e;
+  --color-text-muted: #78716c;
+  --color-focus-ring: #9eb9d0;
+  --color-cta: #e8e2d4;
+  --color-cta-text: #0a0a0a;
+  --color-cta-hover: #ddd5c4;
+  --color-success: #4ade80;
+  --color-success-soft: rgba(74, 222, 128, 0.12);
+  --color-success-strong: #86efac;
+  --color-success-border: rgba(74, 222, 128, 0.28);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.12);
+  --color-warning-strong: #fde68a;
+  --color-warning-border: rgba(251, 191, 36, 0.3);
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
+  --color-danger-strong: #fca5a5;
+  --color-danger-border: rgba(248, 113, 113, 0.32);
+  --color-info-soft: rgba(158, 185, 208, 0.12);
+  --color-info-strong: #c5d7e8;
+  --color-info-border: rgba(158, 185, 208, 0.25);
   --text-display: 1.875rem;
   --text-title: 1.375rem;
   --text-section: 0.9375rem;
@@ -34,14 +40,23 @@
   --radius-md: 0.65rem;
   --radius-lg: 0.95rem;
   --radius-xl: 1.15rem;
-  --shadow-card: 0 1px 1px rgba(15, 23, 42, 0.03), 0 8px 24px rgba(15, 23, 42, 0.06);
-  --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.07);
+  --shadow-card:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 20px 48px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
 body {
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   color: var(--color-text-primary);
-  background: radial-gradient(1200px 500px at 20% -10%, #f0f4ff 0%, transparent 50%), var(--color-surface);
+  background:
+    radial-gradient(900px 420px at 18% -8%, rgba(140, 180, 212, 0.09) 0%, transparent 52%),
+    radial-gradient(700px 380px at 88% 12%, rgba(232, 226, 212, 0.04) 0%, transparent 45%),
+    var(--color-bg);
+}
+
+.font-display {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 a,
@@ -54,8 +69,8 @@ button:active {
 }
 
 ::selection {
-  background: #dfe8ff;
-  color: #0f172a;
+  background: rgba(158, 185, 208, 0.35);
+  color: var(--color-text-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {

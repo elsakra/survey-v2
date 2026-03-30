@@ -1,9 +1,22 @@
 import type { Metadata } from "next";
+import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Survey V2 — AI Interview Platform",
-  description: "Create and manage AI-conducted phone interviews",
+  title: "Voicewell — Voice research platform",
+  description: "Create and manage AI-conducted voice interviews",
 };
 
 export default function RootLayout({
@@ -13,7 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-white">{children}</body>
+      <body className={`${dmSans.variable} ${fraunces.variable} min-h-screen antialiased`}>
+        {children}
+      </body>
     </html>
   );
 }

@@ -171,7 +171,7 @@ export function ContactUpload({ campaignId, userId, onComplete }: ContactUploadP
             accept=".csv"
             onChange={handleCsvUpload}
             disabled={uploading}
-            className="block text-sm text-[var(--color-text-secondary)] file:mr-4 file:rounded-[var(--radius-md)] file:border file:border-[var(--color-border)] file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--color-text-primary)] hover:file:bg-[var(--color-surface-subtle)]"
+            className="block text-sm text-[var(--color-text-secondary)] file:mr-4 file:rounded-[var(--radius-md)] file:border file:border-[var(--color-border)] file:bg-[var(--color-surface-elevated)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--color-text-primary)] hover:file:bg-[var(--color-surface-subtle)]"
           />
           {csvResults && (
             <p className="text-sm text-[var(--color-success-strong)]">{csvResults}</p>

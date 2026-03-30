@@ -24,10 +24,10 @@ export interface PillarAnalysis {
 }
 
 const SENTIMENT_COLOR: Record<string, string> = {
-  positive: "bg-green-100 text-green-700",
-  negative: "bg-red-100 text-red-700",
-  neutral: "bg-gray-100 text-gray-600",
-  mixed: "bg-yellow-100 text-yellow-700",
+  positive: "bg-[var(--color-success-soft)] text-[var(--color-success-strong)]",
+  negative: "bg-[var(--color-danger-soft)] text-[var(--color-danger-strong)]",
+  neutral: "bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)]",
+  mixed: "bg-[var(--color-warning-soft)] text-[var(--color-warning-strong)]",
 };
 
 const DEPTH_LABEL: Record<string, string> = {
@@ -40,7 +40,7 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
           Pillar Analysis
         </h3>
         {analysis.pillars.map((p) => (
@@ -97,7 +97,7 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
       </div>
 
       <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
           Call Quality
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -133,7 +133,7 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
 
       {analysis.overallThemes.length > 0 && (
         <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
-          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
             Themes
           </h3>
           <ul className="list-disc list-inside space-y-1">
@@ -146,7 +146,7 @@ export function AnalysisDisplay({ analysis }: { analysis: PillarAnalysis }) {
 
       {analysis.notableQuotes.length > 0 && (
         <div className="bg-[var(--color-surface-elevated)] rounded-xl border border-[var(--color-border)] p-5">
-          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">
             Notable Quotes
           </h3>
           <div className="space-y-2">

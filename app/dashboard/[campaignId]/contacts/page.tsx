@@ -73,19 +73,19 @@ export default function ContactsPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>
           <CardBody className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Total contacts</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Total contacts</p>
             <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{contacts.length}</p>
           </CardBody>
         </Card>
         <Card>
           <CardBody className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Pending</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Pending</p>
             <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{pending}</p>
           </CardBody>
         </Card>
         <Card>
           <CardBody className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Completed</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Completed</p>
             <p className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">{completed}</p>
           </CardBody>
         </Card>
@@ -93,9 +93,7 @@ export default function ContactsPage() {
 
       <Card>
         <CardBody>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-          Add Contacts
-          </h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-label)]">Add Contacts</h3>
           {userId && (
             <ContactUpload
               campaignId={campaignId}

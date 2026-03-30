@@ -31,7 +31,7 @@ export function CloneCampaignButton({ campaignId }: { campaignId: string }) {
     <button
       onClick={handleClone}
       disabled={loading}
-      className="px-3 py-1.5 bg-white border border-gray-300 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+      className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-subtle)] disabled:opacity-50"
     >
       {loading ? "Cloning..." : "Clone"}
     </button>

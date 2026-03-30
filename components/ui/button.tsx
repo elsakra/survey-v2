@@ -7,9 +7,9 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-[var(--color-accent)] text-white border border-[var(--color-accent)] hover:brightness-95",
+    "bg-[var(--color-cta)] text-[var(--color-cta-text)] border border-[var(--color-cta)] hover:bg-[var(--color-cta-hover)]",
   secondary:
-    "bg-white text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-[var(--color-surface-subtle)]",
+    "bg-transparent text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]",
   ghost:
     "bg-transparent text-[var(--color-text-secondary)] border border-transparent hover:bg-[var(--color-surface-subtle)]",
   success:
@@ -43,7 +43,7 @@ export function Button({
       type={type}
       className={cn(
         "inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium transition-all duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]",
         "disabled:cursor-not-allowed disabled:opacity-55",
         variantStyles[variant],
         sizeStyles[size],
