@@ -30,15 +30,8 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[7rem] shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)] py-4 lg:flex">
-          <Link
-            href="/dashboard"
-            className="mb-8 inline-flex outline-none ring-offset-2 ring-offset-[var(--color-bg)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-            title="Voicewell — Campaigns"
-          >
-            <VoicewellLogo height={20} className="opacity-95" />
-          </Link>
-          <nav className="flex flex-1 flex-col items-center gap-2">
+        <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)] py-3 lg:flex">
+          <nav className="flex flex-1 flex-col items-center gap-2 pt-1">
             {primaryNav.map((item) => {
               const active =
                 pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
