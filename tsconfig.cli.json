@@ -7,12 +7,11 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src",
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"],
+  "include": ["src", "lib/vapi-interview-prompt.ts"],
   "exclude": ["node_modules", "dist"]
 }
