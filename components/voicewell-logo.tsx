@@ -1,6 +1,7 @@
 import Image from "next/image";
+import { cn } from "@/lib/ui";
 
-/** Raster wordmark from Voicewell marketing (634×138). */
+/** Raster wordmark (634×138). Black on transparent — `globals.css` inverts in `html.dark` only. */
 const LOGO_WIDTH = 634;
 const LOGO_HEIGHT = 138;
 
@@ -20,8 +21,8 @@ export function VoicewellLogo({
       alt="Voicewell"
       width={width}
       height={height}
-      className={className}
       priority={priority}
+      className={cn("voicewell-wordmark h-auto w-auto max-w-none shrink-0", className)}
     />
   );
 }
