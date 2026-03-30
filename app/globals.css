@@ -1,7 +1,55 @@
 @import "tailwindcss";
 
 @theme {
-  /* Voicewell-aligned dark UI (matches voicewell-ui.vercel.app) */
+  --radius-sm: 0.4rem;
+  --radius-md: 0.65rem;
+  --radius-lg: 0.95rem;
+  --radius-xl: 1.15rem;
+  --text-display: 1.875rem;
+  --text-title: 1.375rem;
+  --text-section: 0.9375rem;
+}
+
+/* Light (default). Toggle persists via `html.dark`. */
+:root {
+  --color-bg: #f4f4f5;
+  --color-accent: #3d6fa8;
+  --color-accent-soft: rgba(61, 111, 168, 0.1);
+  --color-label: #2f5f94;
+  --color-surface: #ececee;
+  --color-surface-elevated: #ffffff;
+  --color-surface-subtle: #e4e4e7;
+  --color-border: rgba(24, 24, 27, 0.1);
+  --color-border-subtle: rgba(24, 24, 27, 0.06);
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+  --color-focus-ring: #3d6fa8;
+  --color-cta: #e8e2d4;
+  --color-cta-text: #0a0a0a;
+  --color-cta-hover: #ddd5c4;
+  --color-success: #16a34a;
+  --color-success-soft: rgba(22, 163, 74, 0.12);
+  --color-success-strong: #15803d;
+  --color-success-border: rgba(22, 163, 74, 0.28);
+  --color-warning: #ca8a04;
+  --color-warning-soft: rgba(202, 138, 4, 0.12);
+  --color-warning-strong: #a16207;
+  --color-warning-border: rgba(202, 138, 4, 0.3);
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.1);
+  --color-danger-strong: #b91c1c;
+  --color-danger-border: rgba(220, 38, 38, 0.28);
+  --color-info-soft: rgba(61, 111, 168, 0.1);
+  --color-info-strong: #294cad;
+  --color-info-border: rgba(61, 111, 168, 0.22);
+  --shadow-card:
+    0 1px 1px rgba(15, 23, 42, 0.03),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.07);
+}
+
+html.dark {
   --color-bg: #050505;
   --color-accent: #9eb9d0;
   --color-accent-soft: rgba(158, 185, 208, 0.14);
@@ -18,10 +66,10 @@
   --color-cta: #e8e2d4;
   --color-cta-text: #0a0a0a;
   --color-cta-hover: #ddd5c4;
-  --color-success: #4ade80;
-  --color-success-soft: rgba(74, 222, 128, 0.12);
-  --color-success-strong: #86efac;
-  --color-success-border: rgba(74, 222, 128, 0.28);
+  --color-success: #059669;
+  --color-success-soft: rgba(16, 185, 129, 0.15);
+  --color-success-strong: #34d399;
+  --color-success-border: rgba(52, 211, 153, 0.28);
   --color-warning: #fbbf24;
   --color-warning-soft: rgba(251, 191, 36, 0.12);
   --color-warning-strong: #fde68a;
@@ -33,13 +81,6 @@
   --color-info-soft: rgba(158, 185, 208, 0.12);
   --color-info-strong: #c5d7e8;
   --color-info-border: rgba(158, 185, 208, 0.25);
-  --text-display: 1.875rem;
-  --text-title: 1.375rem;
-  --text-section: 0.9375rem;
-  --radius-sm: 0.4rem;
-  --radius-md: 0.65rem;
-  --radius-lg: 0.95rem;
-  --radius-xl: 1.15rem;
   --shadow-card:
     0 0 0 1px rgba(255, 255, 255, 0.06) inset,
     0 20px 48px rgba(0, 0, 0, 0.45);
@@ -49,10 +90,25 @@
 body {
   font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   color: var(--color-text-primary);
+}
+
+html:not(.dark) body {
+  background:
+    radial-gradient(900px 420px at 18% -8%, rgba(61, 111, 168, 0.07) 0%, transparent 52%),
+    radial-gradient(700px 380px at 88% 12%, rgba(232, 226, 212, 0.35) 0%, transparent 45%),
+    var(--color-bg);
+}
+
+html.dark body {
   background:
     radial-gradient(900px 420px at 18% -8%, rgba(140, 180, 212, 0.09) 0%, transparent 52%),
     radial-gradient(700px 380px at 88% 12%, rgba(232, 226, 212, 0.04) 0%, transparent 45%),
     var(--color-bg);
+}
+
+/* Black PNG wordmark: light text on dark chrome only */
+html.dark .voicewell-wordmark {
+  filter: invert(1);
 }
 
 .font-display {
@@ -68,7 +124,12 @@ button:active {
   transform: translateY(0.5px) scale(0.997);
 }
 
-::selection {
+html:not(.dark) ::selection {
+  background: rgba(61, 111, 168, 0.22);
+  color: var(--color-text-primary);
+}
+
+html.dark ::selection {
   background: rgba(158, 185, 208, 0.35);
   color: var(--color-text-primary);
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { DM_Sans, Fraunces } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -13,6 +15,20 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   display: "swap",
 });
+
+const themeInit = `
+(function(){
+  try {
+    var k = 'voicewell-theme';
+    var t = localStorage.getItem(k);
+    var dark;
+    if (t === 'light') dark = false;
+    else if (t === 'dark') dark = true;
+    else dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle('dark', dark);
+  } catch (e) {}
+})();
+`;
 
 export const metadata: Metadata = {
   ...(process.env.NEXT_PUBLIC_APP_URL
@@ -35,9 +51,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${fraunces.variable} min-h-screen antialiased`}>
-        {children}
+        <Script id="voicewell-theme-init" strategy="beforeInteractive">
+          {themeInit}
+        </Script>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
