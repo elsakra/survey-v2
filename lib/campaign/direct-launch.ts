@@ -94,6 +94,7 @@ export async function processContact(
       instructions: campaign.instructions ?? undefined,
       openingSentence: campaign.opening_sentence ?? undefined,
       webhookUrl,
+      channel: "outboundPhone",
     });
 
     const call = await createVapiOutboundCall({

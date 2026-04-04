@@ -40,6 +40,7 @@ export async function POST(
       maxDurationSec: campaign.max_duration_sec ?? undefined,
       instructions: campaign.instructions ?? undefined,
       openingSentence: campaign.opening_sentence ?? undefined,
+      channel: "web",
     });
 
     return NextResponse.json({ assistantId: assistant.id });

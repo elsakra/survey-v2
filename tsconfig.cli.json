@@ -12,6 +12,6 @@
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "lib/vapi-interview-prompt.ts"],
+  "include": ["src", "lib/vapi-interview-prompt.ts", "lib/vapi.ts"],
   "exclude": ["node_modules", "dist"]
 }

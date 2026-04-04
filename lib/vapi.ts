@@ -2,14 +2,17 @@ import { buildInterviewSystemPrompt } from "./vapi-interview-prompt";
 
 const VAPI_API_BASE = "https://api.vapi.ai";
 
-const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "groq";
-const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "openai/gpt-oss-120b";
-const DEFAULT_MODEL_TEMPERATURE = Number(process.env.VAPI_MODEL_TEMPERATURE ?? "0.35");
+/** Default: OpenAI gpt-4o — strong quality with voice-friendly latency (override via env). */
+const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "openai";
+const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "gpt-4o";
+const DEFAULT_MODEL_TEMPERATURE = Number(process.env.VAPI_MODEL_TEMPERATURE ?? "0.3");
 const DEFAULT_VOICE_SPEED = Number(process.env.VAPI_VOICE_SPEED ?? "0.98");
 const DEFAULT_VOICE_STABILITY = Number(process.env.VAPI_VOICE_STABILITY ?? "0.5");
 const DEFAULT_VOICE_SIMILARITY = Number(process.env.VAPI_VOICE_SIMILARITY ?? "0.8");
 const DEFAULT_WAIT_SECONDS = Number(process.env.VAPI_WAIT_SECONDS ?? "0.6");
-const DEFAULT_RESPONSE_DELAY_SECONDS = Number(process.env.VAPI_RESPONSE_DELAY_SECONDS ?? "0.35");
+/** Extra beat before speaking on PSTN so screening prompts / pickup aren't talked over */
+const DEFAULT_OUTBOUND_WAIT_SECONDS = Number(process.env.VAPI_OUTBOUND_WAIT_SECONDS ?? "1.35");
+const DEFAULT_RESPONSE_DELAY_SECONDS = Number(process.env.VAPI_RESPONSE_DELAY_SECONDS ?? "0.28");
 const DEFAULT_STOP_WORDS = Number(process.env.VAPI_STOP_WORDS ?? "2");
 const DEFAULT_STOP_VOICE_SECONDS = Number(process.env.VAPI_STOP_VOICE_SECONDS ?? "0.2");
 const DEFAULT_STOP_BACKOFF_SECONDS = Number(process.env.VAPI_STOP_BACKOFF_SECONDS ?? "0.8");
@@ -56,19 +59,30 @@ export function buildPillarsPrompt(config: CampaignPillarsJson): string {
 export { buildInterviewSystemPrompt } from "./vapi-interview-prompt";
 export type { InterviewPromptOptions } from "./vapi-interview-prompt";
 
+/** Truncate long org names for telephony openers */
+export function shortenOrgLabel(org: string, max = 42): string {
+  const t = org.replace(/\s+/g, " ").trim();
+  if (!t) return "the team";
+  return t.length <= max ? t : `${t.slice(0, max - 1).trim()}…`;
+}
+
 export interface CreateAssistantOpts {
   pillarsJson: CampaignPillarsJson;
   maxDurationSec?: number;
   webhookUrl?: string;
   instructions?: string;
   openingSentence?: string;
+  /** Browser test vs PSTN — outbound uses screening-safe openers and user-speaks-first */
+  channel?: "web" | "outboundPhone";
 }
 
 export async function createVapiAssistant(opts: CreateAssistantOpts) {
   const name = opts.pillarsJson.interviewer_name ?? "Sarah";
-  const org = opts.pillarsJson.org_name ?? "a research consulting firm";
+  const orgRaw = opts.pillarsJson.org_name ?? "a research consulting firm";
+  const org = shortenOrgLabel(orgRaw, 48);
   const durationSec = opts.maxDurationSec ?? 420;
   const durationMin = Math.round(durationSec / 60);
+  const channel = opts.channel ?? "web";
 
   let pillarsPrompt = buildPillarsPrompt(opts.pillarsJson);
   if (opts.instructions) {
@@ -77,20 +91,27 @@ export async function createVapiAssistant(opts: CreateAssistantOpts) {
 
   const systemPrompt = buildInterviewSystemPrompt(pillarsPrompt, durationSec, name, {
     preferQuantification: opts.pillarsJson.constraints?.prefer_quantification === true,
+    channel,
   });
 
-  const firstMessage =
-    opts.openingSentence?.trim() ||
-    (`Hey, this is ${name} calling on behalf of ${org}. ` +
-      `We're doing a short confidential research conversation — should take about ${durationMin} minutes. ` +
-      `The call is recorded just so I don't miss anything. Is now an okay time?`);
+  let firstMessage: string;
+  if (opts.openingSentence?.trim()) {
+    firstMessage = opts.openingSentence.trim();
+  } else if (channel === "outboundPhone") {
+    firstMessage = `Hi — it's ${name} from ${org}. Scheduled research callback.`;
+  } else {
+    firstMessage =
+      `${name}, ${org} — quick confidential chat, ~${durationMin} minutes, recorded. Ready?`;
+  }
 
   const title = opts.pillarsJson.title ?? "Survey";
   const assistantName = `${title.slice(0, 28)} - Interview`;
 
+  const outboundPhone = channel === "outboundPhone";
   const payload: Record<string, unknown> = {
     name: assistantName,
     firstMessage,
+    firstMessageMode: outboundPhone ? "assistant-waits-for-user" : "assistant-speaks-first",
     model: {
       provider: DEFAULT_MODEL_PROVIDER,
       model: DEFAULT_MODEL_NAME,
@@ -108,7 +129,7 @@ export async function createVapiAssistant(opts: CreateAssistantOpts) {
       speed: DEFAULT_VOICE_SPEED,
     },
     startSpeakingPlan: {
-      waitSeconds: DEFAULT_WAIT_SECONDS,
+      waitSeconds: outboundPhone ? DEFAULT_OUTBOUND_WAIT_SECONDS : DEFAULT_WAIT_SECONDS,
       smartEndpointingPlan: { provider: "livekit" },
     },
     stopSpeakingPlan: {
@@ -119,7 +140,7 @@ export async function createVapiAssistant(opts: CreateAssistantOpts) {
     responseDelaySeconds: DEFAULT_RESPONSE_DELAY_SECONDS,
     silenceTimeoutSeconds: 45,
     maxDurationSeconds: durationSec + 30,
-    endCallMessage: "Thanks again for your time. Take care.",
+    endCallMessage: "Thanks — take care.",
     endCallPhrases: ["have a great rest of your day", "take care", "goodbye for now"],
     backgroundSound: "off",
     backgroundSpeechDenoisingPlan: { smartDenoisingPlan: { enabled: true } },

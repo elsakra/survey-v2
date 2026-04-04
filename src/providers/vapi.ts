@@ -3,17 +3,19 @@ import fs from "fs";
 import path from "path";
 
 import { buildInterviewSystemPrompt } from "../../lib/vapi-interview-prompt";
+import { shortenOrgLabel } from "../../lib/vapi";
 
 const VAPI_API_BASE = "https://api.vapi.ai";
 
-const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "groq";
-const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "openai/gpt-oss-120b";
-const DEFAULT_MODEL_TEMPERATURE = Number(process.env.VAPI_MODEL_TEMPERATURE ?? "0.35");
+const DEFAULT_MODEL_PROVIDER = process.env.VAPI_MODEL_PROVIDER ?? "openai";
+const DEFAULT_MODEL_NAME = process.env.VAPI_MODEL_NAME ?? "gpt-4o";
+const DEFAULT_MODEL_TEMPERATURE = Number(process.env.VAPI_MODEL_TEMPERATURE ?? "0.3");
 const DEFAULT_VOICE_SPEED = Number(process.env.VAPI_VOICE_SPEED ?? "0.98");
 const DEFAULT_VOICE_STABILITY = Number(process.env.VAPI_VOICE_STABILITY ?? "0.5");
 const DEFAULT_VOICE_SIMILARITY = Number(process.env.VAPI_VOICE_SIMILARITY ?? "0.8");
 const DEFAULT_WAIT_SECONDS = Number(process.env.VAPI_WAIT_SECONDS ?? "0.6");
-const DEFAULT_RESPONSE_DELAY_SECONDS = Number(process.env.VAPI_RESPONSE_DELAY_SECONDS ?? "0.35");
+const DEFAULT_OUTBOUND_WAIT_SECONDS = Number(process.env.VAPI_OUTBOUND_WAIT_SECONDS ?? "1.35");
+const DEFAULT_RESPONSE_DELAY_SECONDS = Number(process.env.VAPI_RESPONSE_DELAY_SECONDS ?? "0.28");
 const DEFAULT_STOP_WORDS = Number(process.env.VAPI_STOP_WORDS ?? "2");
 const DEFAULT_STOP_VOICE_SECONDS = Number(process.env.VAPI_STOP_VOICE_SECONDS ?? "0.2");
 const DEFAULT_STOP_BACKOFF_SECONDS = Number(process.env.VAPI_STOP_BACKOFF_SECONDS ?? "0.8");
@@ -41,6 +43,8 @@ export interface VapiAssistantInput {
   maxDurationSec: number;
   interviewerName?: string;
   orgName?: string;
+  preferQuantification?: boolean;
+  openingSentence?: string;
 }
 
 export interface VapiAssistant {
@@ -68,17 +72,22 @@ export async function createConversationalAssistant(
 ): Promise<VapiAssistant> {
   const assistantName = buildAssistantName(input.title);
   const name = input.interviewerName ?? "Sarah";
-  const org = input.orgName ?? "a research consulting firm";
+  const org = shortenOrgLabel(input.orgName ?? "a research consulting firm", 48);
   const durationMin = Math.round(input.maxDurationSec / 60);
 
-  const firstMessage =
-    `Hey, this is ${name} calling on behalf of ${org}. ` +
-    `We're doing a short confidential research conversation — should take about ${durationMin} minutes. ` +
-    `The call is recorded just so I don't miss anything. Is now an okay time?`;
+  const firstMessage = input.openingSentence?.trim()
+    ? input.openingSentence.trim()
+    : `Hi — it's ${name} from ${org}. Scheduled research callback.`;
+
+  const systemContent = buildInterviewSystemPrompt(input.pillarsPrompt, input.maxDurationSec, name, {
+    preferQuantification: input.preferQuantification === true,
+    channel: "outboundPhone",
+  });
 
   const payload = {
     name: assistantName,
     firstMessage,
+    firstMessageMode: "assistant-waits-for-user",
     model: {
       provider: DEFAULT_MODEL_PROVIDER,
       model: DEFAULT_MODEL_NAME,
@@ -86,7 +95,7 @@ export async function createConversationalAssistant(
       messages: [
         {
           role: "system",
-          content: buildInterviewSystemPrompt(input.pillarsPrompt, input.maxDurationSec, name),
+          content: systemContent,
         },
       ],
     },
@@ -101,7 +110,7 @@ export async function createConversationalAssistant(
       speed: DEFAULT_VOICE_SPEED,
     },
     startSpeakingPlan: {
-      waitSeconds: DEFAULT_WAIT_SECONDS,
+      waitSeconds: DEFAULT_OUTBOUND_WAIT_SECONDS,
       smartEndpointingPlan: { provider: "livekit" },
     },
     stopSpeakingPlan: {
@@ -112,7 +121,7 @@ export async function createConversationalAssistant(
     responseDelaySeconds: DEFAULT_RESPONSE_DELAY_SECONDS,
     silenceTimeoutSeconds: 45,
     maxDurationSeconds: input.maxDurationSec + 30,
-    endCallMessage: "Thanks again for your time. Take care.",
+    endCallMessage: "Thanks — take care.",
     endCallPhrases: [
       "have a great rest of your day",
       "take care",

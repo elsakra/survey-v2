@@ -179,6 +179,7 @@ async function runInterview(opts: {
     maxDurationSec: durationSec,
     interviewerName: pillarsConfig.interviewer_name,
     orgName: pillarsConfig.org_name,
+    preferQuantification: pillarsConfig.constraints?.prefer_quantification === true,
   });
 
   const call = await createVapiOutboundCall({

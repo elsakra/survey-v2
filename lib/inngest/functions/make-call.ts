@@ -140,6 +140,7 @@ export const makeCall = inngest.createFunction(
         instructions: campaign.instructions ?? undefined,
         openingSentence: campaign.opening_sentence ?? undefined,
         webhookUrl,
+        channel: "outboundPhone",
       });
 
       return { sessionId: session.id, attemptId: attempt.id, assistantId: assistant.id };
