@@ -35,7 +35,7 @@ If behavior in code and this doc diverge, trust code first and update this file.
 ### Core web API routes
 
 - `app/api/campaigns/[campaignId]/assistant/route.ts`  
-  Creates a Vapi assistant for browser test calls.
+  Creates a Vapi assistant for browser test calls (`channel: "web"` — assistant speaks first; concise opener).
 - `app/api/campaigns/[campaignId]/launch/route.ts`  
   Launches draft campaign and enqueues `campaign/launch` in Inngest.
 - `app/api/campaigns/[campaignId]/status/route.ts`  
@@ -58,13 +58,17 @@ If behavior in code and this doc diverge, trust code first and update this file.
 
 ### Vapi integration
 
-- `lib/vapi.ts` - Web app Vapi helper functions (assistant + call + prompt)
-- `src/providers/vapi.ts` - CLI Vapi helper functions (parallel logic)
+- `lib/vapi-interview-prompt.ts` - **shared** system prompt for all voice assistants (browser + PSTN + CLI); includes outbound call-screening protocol and terse / BDR-style turn rules
+- `lib/vapi.ts` - Web app Vapi helpers: `createVapiAssistant` (with `channel`), `createVapiOutboundCall`, `buildPillarsPrompt`, `shortenOrgLabel`
+- `src/providers/vapi.ts` - CLI Vapi helpers (`createConversationalAssistant`, etc.); kept in sync with `lib/vapi.ts` for model/voice/timing defaults unless intentionally diverging
 - `components/voice-test.tsx` - browser live test + transcript rendering
+- `components/ui/app-shell.tsx` - dashboard chrome (Voicewell wordmark, sidebar nav, theme toggle)
 
 ### Campaign UI
 
-- `app/dashboard/page.tsx` - campaign list (includes row-level clone action)
+- `app/dashboard/page.tsx` - campaign list (Overview / All campaigns tabs, clone action)
+- `app/dashboard/activity/page.tsx` - recent `call_attempts` across the user’s campaigns
+- `app/dashboard/help/page.tsx` - in-app help / orientation
 - `app/dashboard/[campaignId]/page.tsx` - campaign detail/review + launch
 - `app/dashboard/[campaignId]/edit/page.tsx` - draft-only editing
 - `app/dashboard/[campaignId]/contacts/page.tsx` - add/filter/manage contacts
@@ -112,17 +116,22 @@ Reference template: `.env.example`
 
 ### Vapi tuning (latency/quality profile)
 
-- `VAPI_MODEL_PROVIDER` (default `groq`)
-- `VAPI_MODEL_NAME` (default `openai/gpt-oss-120b`)
-- `VAPI_MODEL_TEMPERATURE` (default `0.35`)
+Defaults target **OpenAI** in Vapi (`gpt-4o`) for a balance of latency and quality; override via env. Configure the OpenAI credential/integration in the **Vapi dashboard** when using `openai`.
+
+- `VAPI_MODEL_PROVIDER` (default `openai`)
+- `VAPI_MODEL_NAME` (default `gpt-4o`; e.g. `gpt-4o-mini` for cheaper/faster)
+- `VAPI_MODEL_TEMPERATURE` (default `0.3`)
 - `VAPI_VOICE_SPEED` (default `0.98`)
 - `VAPI_VOICE_STABILITY` (default `0.5`)
 - `VAPI_VOICE_SIMILARITY` (default `0.8`)
-- `VAPI_WAIT_SECONDS` (default `0.6`)
-- `VAPI_RESPONSE_DELAY_SECONDS` (default `0.35`)
+- `VAPI_WAIT_SECONDS` (default `0.6`) — used for **web** / general `startSpeakingPlan.waitSeconds`
+- `VAPI_OUTBOUND_WAIT_SECONDS` (default `1.35`) — **PSTN outbound** only; extra beat before speaking to reduce talking over mobile call screening / early audio
+- `VAPI_RESPONSE_DELAY_SECONDS` (default `0.28`)
 - `VAPI_STOP_WORDS` (default `2`)
 - `VAPI_STOP_VOICE_SECONDS` (default `0.2`)
 - `VAPI_STOP_BACKOFF_SECONDS` (default `0.8`)
+
+Legacy Groq (example): `VAPI_MODEL_PROVIDER=groq` and `VAPI_MODEL_NAME=openai/gpt-oss-120b` (requires Groq setup in Vapi).
 
 ## 6) Data Model (High Level)
 
@@ -157,9 +166,10 @@ Campaign config highlights:
 
 1. User opens campaign test page.
 2. `VoiceTest` requests assistant via `/api/campaigns/[id]/assistant`.
-3. Browser Vapi SDK starts call with assistant ID.
-4. Live transcript renders interviewer + interviewee turns.
-5. Ending/complete marks test status via `/api/campaigns/[id]/test-status`.
+3. `createVapiAssistant` runs with `channel: "web"`: `firstMessageMode` **assistant-speaks-first**, concise browser opener.
+4. Browser Vapi SDK starts call with assistant ID.
+5. Live transcript renders interviewer + interviewee turns.
+6. Ending/complete marks test status via `/api/campaigns/[id]/test-status`.
 
 Important implementation notes:
 
@@ -179,12 +189,18 @@ Important implementation notes:
 ### C) Inngest queue execution
 
 - `process-campaign` (`campaign/launch`) pulls pending contacts, marks queued, schedules `call/make` events.
-- `make-call` enforces:
+- `make-call` (and `lib/campaign/direct-launch.ts` when used) enforces:
   - campaign status checks (active/paused)
   - calling-hour window
   - retries and exhaustion logic
-  - Vapi assistant creation and outbound call
+  - Vapi assistant creation with `channel: "outboundPhone"` and outbound call
   - post-call status updates
+
+**Outbound assistant behavior** (see `lib/vapi.ts` + `lib/vapi-interview-prompt.ts`):
+
+- `firstMessageMode: "assistant-waits-for-user"` so the callee (or call screening) can speak before the assistant’s scripted line.
+- Default `firstMessage` is a **short** name/org/reason line for mobile screening (e.g. iOS “Ask Reason for Calling”); full consent and duration come in later model turns per the system prompt.
+- `startSpeakingPlan.waitSeconds` uses `VAPI_OUTBOUND_WAIT_SECONDS` on PSTN.
 
 ### D) Vapi webhook ingestion
 
@@ -216,7 +232,8 @@ Important implementation notes:
 
 ## 9) UX and Workflow Behavior (Current)
 
-- Campaign list has right-side Clone action.
+- App shell: Voicewell wordmark in header; narrow sidebar (campaigns / new campaign / activity / help); light+dark theme (persisted).
+- Campaign list has right-side Clone action; Overview vs All campaigns table.
 - After successful test call, UI offers "Continue to Contacts" and "Test Again".
 - Contacts page includes CTA to continue to review/launch without back navigation.
 - Draft campaigns are editable; launched campaigns are locked.
@@ -234,11 +251,15 @@ Important implementation notes:
 - Added `/api/inngest?diagnostics=1`.
 - Tuned Vapi defaults toward lower latency with strong instruction-following.
 - Fixed live transcript duplicate incremental lines by collapsing same-turn growth updates.
+- Outbound PSTN: iPhone/call-screening-aware behavior (`assistant-waits-for-user`, short first line, `VAPI_OUTBOUND_WAIT_SECONDS`); web test uses `channel: "web"`.
+- Shared interview prompt in `lib/vapi-interview-prompt.ts`; default LLM provider/model moved to **OpenAI `gpt-4o`** (env-overridable).
+- Terse / BDR-style turn rules in system prompt (default one short sentence per turn).
 
 ## 11) Known Issues / Caveats
 
 - `pnpm typecheck` may fail due to pre-existing generated `.next/types/routes...` duplicate declaration issues in this workspace; this is not tied to current feature logic.
 - Vapi behavior varies by provider/model release; keep env-overridable tuning values instead of hardcoding one profile forever.
+- `firstMessageMode` on outbound may still be imperfect on some carriers (Vapi/community reports); tune `VAPI_OUTBOUND_WAIT_SECONDS` and test on real devices with screening enabled.
 - If deploying to a new Vercel project/domain, ensure Supabase auth redirect settings include that domain.
 
 ## 12) Agent Guidelines for Future Changes
@@ -248,6 +269,8 @@ Important implementation notes:
 - Maintain transcript safety filters (no system prompt leakage in UI).
 - Preserve dedupe/collapse logic for live transcript incremental updates.
 - When touching Vapi params, change both `lib/vapi.ts` and `src/providers/vapi.ts` unless intentionally diverging web vs CLI.
+- Interview **wording and flow** live in `lib/vapi-interview-prompt.ts`; keep web and CLI assistants aligned by importing it (do not fork long prompts in only one file).
+- When adding assistant behavior that differs by surface, use `channel` on `createVapiAssistant` (`web` vs `outboundPhone`) and extend `InterviewPromptOptions` / prompt sections as needed.
 - After substantial edits:
   - run lint checks on touched files
   - run typecheck if feasible (note known `.next` issue)
